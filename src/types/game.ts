@@ -61,6 +61,84 @@ export interface FreePlaySettings {
   spellingWordsList: string; // text list of words entered by player/teacher/parent
 }
 
+export type DifficultyLevel = 'easy' | 'normal' | 'hard' | 'nightmare';
+
+export type LeaderboardMode = 'quick' | 'solo' | 'team';
+
+export interface DifficultyConfig {
+  id: DifficultyLevel;
+  label: string;
+  description: string;
+  dropSpeed: number; // constant base fall speed (px/sec in reference viewBox)
+  spawnIntervalMs: number; // base spawn interval in ms
+  minSpawnIntervalMs: number; // floor when pace accelerates
+  spawnAccelFactor: number; // multiplier per word submitted (e.g. 0.92)
+  speedIncreaseRate: number; // % speed increase per word submitted
+  maxSpeedMultiplier: number; // max multiplier over base dropSpeed
+  ceilingHeight: number; // danger line Y coordinate
+  tileRadius: number; // hex radius
+  maxInFlightOffset: number; // adjustment to max concurrent falling tiles
+}
+
+export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
+  easy: {
+    id: 'easy',
+    label: 'Easy',
+    description: 'Gentle pace · Larger tiles',
+    dropSpeed: 170,
+    spawnIntervalMs: 1200,
+    minSpawnIntervalMs: 480,
+    spawnAccelFactor: 0.96,
+    speedIncreaseRate: 5,
+    maxSpeedMultiplier: 2.2,
+    ceilingHeight: 60,
+    tileRadius: 31,
+    maxInFlightOffset: -1,
+  },
+  normal: {
+    id: 'normal',
+    label: 'Normal',
+    description: 'Balanced classic pace',
+    dropSpeed: 260,
+    spawnIntervalMs: 850,
+    minSpawnIntervalMs: 300,
+    spawnAccelFactor: 0.92,
+    speedIncreaseRate: 10,
+    maxSpeedMultiplier: 3.5,
+    ceilingHeight: 85,
+    tileRadius: 28,
+    maxInFlightOffset: 0,
+  },
+  hard: {
+    id: 'hard',
+    label: 'Hard',
+    description: 'Fast drops · Higher ceiling',
+    dropSpeed: 340,
+    spawnIntervalMs: 640,
+    minSpawnIntervalMs: 230,
+    spawnAccelFactor: 0.9,
+    speedIncreaseRate: 14,
+    maxSpeedMultiplier: 4.0,
+    ceilingHeight: 105,
+    tileRadius: 26,
+    maxInFlightOffset: 1,
+  },
+  nightmare: {
+    id: 'nightmare',
+    label: 'Nightmare',
+    description: 'Extreme speed & spawns',
+    dropSpeed: 430,
+    spawnIntervalMs: 460,
+    minSpawnIntervalMs: 180,
+    spawnAccelFactor: 0.88,
+    speedIncreaseRate: 18,
+    maxSpeedMultiplier: 4.5,
+    ceilingHeight: 130,
+    tileRadius: 25,
+    maxInFlightOffset: 2,
+  },
+};
+
 export const DEFAULT_FREE_PLAY_SETTINGS: FreePlaySettings = {
   dropSpeed: 260,
   spawnDelayMs: 80,

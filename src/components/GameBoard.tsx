@@ -263,6 +263,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             <stop offset="100%" stopColor="#4ade80" />
           </linearGradient>
 
+          {/* Press flash shimmer gradient */}
+          <linearGradient id="pressFlashGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+            <stop offset="50%" stopColor="#fef9c3" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#fde047" stopOpacity="0.7" />
+          </linearGradient>
+
           {/* Drop shadow for 3D tile feel */}
           <filter id="tileShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2.5" stdDeviation="2" floodColor="#000000" floodOpacity="0.45" />
@@ -434,17 +441,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               <g
                 id={`hex-tile-${tile.id}`}
                 key={tile.id}
-                className={isPulsing ? 'animate-hex-pulse' : ''}
-                style={{
-                  transformOrigin: `${tile.x}px ${tile.y}px`,
-                }}
               >
                 {/* Tile Base Polygon */}
                 <polygon
                   points={getHexPolygonPoints(tile.x, tile.y, tileRadius - 0.5)}
                   fill={fill}
-                  stroke={stroke}
-                  strokeWidth={strokeW}
+                  stroke={isPulsing ? '#fef08a' : stroke}
+                  strokeWidth={isPulsing ? '2.5' : strokeW}
                   filter={filterEffect}
                 />
 
@@ -453,9 +456,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   points={getHexPolygonPoints(tile.x, tile.y, Math.max(1, tileRadius - 3 * scale))}
                   fill="none"
                   stroke="#ffffff"
-                  strokeWidth="1"
-                  opacity={0.45}
+                  strokeWidth={isPulsing ? '1.8' : '1'}
+                  opacity={isPulsing ? 0.9 : 0.45}
                 />
+
+                {/* Brief light flash / shimmer overlay on press (no motion) */}
+                {isPulsing && (
+                  <polygon
+                    points={getHexPolygonPoints(tile.x, tile.y, tileRadius - 0.5)}
+                    fill="url(#pressFlashGradient)"
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                    className="animate-hex-flash"
+                    pointerEvents="none"
+                  />
+                )}
 
                 {/* Letter character */}
                 <text

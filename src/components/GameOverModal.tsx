@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Play, Trophy, Home, Sparkles, BookOpen, Copy, Check } from 'lucide-react';
+import { Play, Trophy, Home, Sparkles, Copy, Check } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { WordEntry } from '../types/game';
 import { getSpellingProgress } from '../utils/spellingProgress';
@@ -11,10 +11,8 @@ interface GameOverModalProps {
   rank: number;
   isNewHighScore: boolean;
   onNewGame: () => void;
-  onViewHighScores: () => void;
   onBackToMenu: () => void;
   reason?: string;
-  onViewWords?: () => void;
   wordEntries?: WordEntry[];
   spellingWords?: string[];
 }
@@ -26,10 +24,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   rank,
   isNewHighScore,
   onNewGame,
-  onViewHighScores,
   onBackToMenu,
   reason = 'The letters reached the top!',
-  onViewWords,
   wordEntries = [],
   spellingWords,
 }) => {
@@ -183,47 +179,26 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         )}
 
         {/* Action Buttons */}
-        <div className="w-full flex flex-col gap-2.5">
-          {/* Play Again (72px) */}
+        <div className="w-full flex flex-col gap-3">
+          {/* Play Again */}
           <button
             type="button"
             onClick={onNewGame}
-            className="w-full min-h-[72px] px-6 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-display font-black text-xl flex items-center justify-center gap-3 shadow-xl shadow-amber-400/25 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500"
+            className="w-full min-h-[64px] px-6 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-display font-black text-xl flex items-center justify-center gap-3 shadow-xl shadow-amber-400/25 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500"
           >
             <Play className="w-6 h-6 fill-current" />
-            <span>▶ Play Again</span>
+            <span>Play Again</span>
           </button>
 
-          {onViewWords && totalWords > 0 && (
-            <button
-              type="button"
-              onClick={onViewWords}
-              className="w-full min-h-[56px] px-5 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-base flex items-center justify-center gap-2 border-2 border-slate-300 active:scale-95 transition-all cursor-pointer shadow-sm"
-            >
-              <BookOpen className="w-5 h-5 text-amber-500" />
-              <span>📖 My Words ({totalWords})</span>
-            </button>
-          )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={onViewHighScores}
-              className="min-h-[56px] px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm flex items-center justify-center gap-1.5 border-2 border-slate-200 active:scale-95 transition-all cursor-pointer"
-            >
-              <Trophy className="w-4 h-4 text-amber-500" />
-              <span>⭐ High Scores</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onBackToMenu}
-              className="min-h-[56px] px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm flex items-center justify-center gap-1.5 border-2 border-slate-200 active:scale-95 transition-all cursor-pointer"
-            >
-              <Home className="w-4 h-4 text-slate-600" />
-              <span>🏠 Home</span>
-            </button>
-          </div>
+          {/* Main Menu */}
+          <button
+            type="button"
+            onClick={onBackToMenu}
+            className="w-full min-h-[56px] px-6 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-display font-black text-lg flex items-center justify-center gap-2.5 border-2 border-slate-300 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400"
+          >
+            <Home className="w-5 h-5 text-slate-700" />
+            <span>Main Menu</span>
+          </button>
         </div>
       </div>
     </div>

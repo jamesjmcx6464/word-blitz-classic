@@ -22,6 +22,29 @@ export function getBoardWidth(mode: ViewMode): number {
 export const FALL_SPEED_PIXELS_PER_SEC = 260;
 export const DROP_GRAVITY_PIXELS_PER_SEC = 260; // Same normal fall rate
 
+export const REFERENCE_PLAY_AREA_WIDTH = BOARD_WIDTH_WIDE; // 720px desktop tuned width
+export const REFERENCE_PLAY_AREA_HEIGHT = BOARD_HEIGHT; // 610px desktop tuned height
+export const SPEED_MULTIPLIER_MIN = 0.5;
+export const SPEED_MULTIPLIER_MAX = 1.5;
+
+/**
+ * Computes a proportional falling/moving speed multiplier from the actual play area size,
+ * using the desktop size the game was tuned for (720x610) as 1.0, clamped to [0.5, 1.5].
+ */
+export function computeScreenSpeedMultiplier(
+  playAreaWidth: number,
+  playAreaHeight: number
+): number {
+  if (!Number.isFinite(playAreaWidth) || !Number.isFinite(playAreaHeight) || playAreaWidth <= 0 || playAreaHeight <= 0) {
+    return 1.0;
+  }
+  const refArea = REFERENCE_PLAY_AREA_WIDTH * REFERENCE_PLAY_AREA_HEIGHT;
+  const actualArea = playAreaWidth * playAreaHeight;
+  const raw = Math.sqrt(actualArea / refArea);
+  const clamped = Math.max(SPEED_MULTIPLIER_MIN, Math.min(SPEED_MULTIPLIER_MAX, raw));
+  return Math.round(clamped * 1000) / 1000;
+}
+
 // Regular flat-topped hexagon SVG polygon points around (cx, cy)
 export function getHexPolygonPoints(cx: number, cy: number, radius: number = HEX_RADIUS - 0.5): string {
   const h = (Math.sqrt(3) / 2) * radius;

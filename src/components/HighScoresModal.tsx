@@ -1,10 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { getHighScores, clearHighScores, HighScoreEntry } from '../utils/highScores';
-import { Trophy, ArrowLeft, Trash2, UserPlus, Play, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  getHighScores,
+  clearHighScores,
+  formatTimeBucketLabel,
+  sortTimeBuckets,
+  HighScoreEntry,
+} from '../utils/highScores';
+import { LeaderboardMode } from '../types/game';
+import {
+  Trophy,
+  ArrowLeft,
+  Trash2,
+  UserPlus,
+  Play,
+  Sparkles,
+  Zap,
+  User,
+  Users,
+  Clock,
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export interface LastSoloResult {
   entryId?: string;
+  mode?: LeaderboardMode;
+  timeBucket?: string;
   playerName: string;
   playerLogo: string;
   score: number;
@@ -22,6 +42,29 @@ interface HighScoresModalProps {
   lastResult?: LastSoloResult | null;
 }
 
+const MODE_META: Record<
+  LeaderboardMode,
+  { label: string; icon: React.ReactNode; activeClasses: string }
+> = {
+  quick: {
+    label: 'Quick Play',
+    icon: <Zap className="w-3.5 h-3.5" />,
+    activeClasses: 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-500/20',
+  },
+  solo: {
+    label: 'Solo Play',
+    icon: <User className="w-3.5 h-3.5" />,
+    activeClasses: 'bg-indigo-500 text-white border-indigo-400 shadow-md shadow-indigo-500/20',
+  },
+  team: {
+    label: 'Team Play',
+    icon: <Users className="w-3.5 h-3.5" />,
+    activeClasses: 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20',
+  },
+};
+
+const MODE_ORDER: LeaderboardMode[] = ['quick', 'solo', 'team'];
+
 export const HighScoresModal: React.FC<HighScoresModalProps> = ({
   onBack,
   onPlayAgain,
@@ -31,8 +74,54 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
   const [scores, setScores] = useState<HighScoreEntry[]>(() => getHighScores());
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
+  const availableModes = useMemo(() => {
+    const present = new Set<LeaderboardMode>(scores.map((s) => s.mode));
+    return MODE_ORDER.filter((m) => present.has(m));
+  }, [scores]);
+
+  const [activeMode, setActiveMode] = useState<LeaderboardMode>(() => {
+    if (lastResult?.mode && availableModes.includes(lastResult.mode)) {
+      return lastResult.mode;
+    }
+    return availableModes[0] || 'quick';
+  });
+
+  const availableTimeBuckets = useMemo(() => {
+    const modeScores = scores.filter((s) => s.mode === activeMode);
+    const unique = Array.from(new Set<string>(modeScores.map((s) => s.timeBucket)));
+    return sortTimeBuckets(unique);
+  }, [scores, activeMode]);
+
+  const [activeTimeBucket, setActiveTimeBucket] = useState<string>(() => {
+    if (lastResult?.timeBucket && availableTimeBuckets.includes(lastResult.timeBucket)) {
+      return lastResult.timeBucket;
+    }
+    return availableTimeBuckets[0] || '';
+  });
+
+  // Sync scores and default selections when lastResult updates
   useEffect(() => {
-    setScores(getHighScores());
+    const fresh = getHighScores();
+    setScores(fresh);
+
+    const presentModes = MODE_ORDER.filter((m) => fresh.some((s) => s.mode === m));
+    const nextMode =
+      lastResult?.mode && presentModes.includes(lastResult.mode)
+        ? lastResult.mode
+        : presentModes[0] || 'quick';
+    setActiveMode(nextMode);
+
+    const buckets = sortTimeBuckets(
+      Array.from(
+        new Set<string>(fresh.filter((s) => s.mode === nextMode).map((s) => s.timeBucket))
+      )
+    );
+    const nextBucket =
+      lastResult?.timeBucket && buckets.includes(lastResult.timeBucket)
+        ? lastResult.timeBucket
+        : buckets[0] || '';
+    setActiveTimeBucket(nextBucket);
+
     if (lastResult && (lastResult.isNewHighScore || (lastResult.rank > 0 && lastResult.rank <= 3))) {
       confetti({
         particleCount: 70,
@@ -41,6 +130,29 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
       });
     }
   }, [lastResult]);
+
+  // Keep activeMode valid if scores change
+  useEffect(() => {
+    if (availableModes.length > 0 && !availableModes.includes(activeMode)) {
+      setActiveMode(availableModes[0]);
+    }
+  }, [availableModes, activeMode]);
+
+  // Keep activeTimeBucket valid when activeMode or availableTimeBuckets change
+  useEffect(() => {
+    if (availableTimeBuckets.length === 0) {
+      setActiveTimeBucket('');
+    } else if (!availableTimeBuckets.includes(activeTimeBucket)) {
+      setActiveTimeBucket(availableTimeBuckets[0]);
+    }
+  }, [availableTimeBuckets, activeTimeBucket]);
+
+  const filteredScores = useMemo(() => {
+    if (!activeTimeBucket) return [];
+    return scores
+      .filter((s) => s.mode === activeMode && s.timeBucket === activeTimeBucket)
+      .sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
+  }, [scores, activeMode, activeTimeBucket]);
 
   const handleClear = () => {
     clearHighScores();
@@ -52,7 +164,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md select-none text-slate-100 overflow-y-auto no-scrollbar animate-fade-in">
       <div className="w-full max-w-lg bg-slate-900 border-2 border-slate-700/80 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
+        <div className="flex items-center justify-between pb-3.5 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-400">
               <Trophy className="w-5 h-5" />
@@ -62,7 +174,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                 Leaderboard
               </h2>
               <span className="text-xs font-semibold text-amber-400/90 block">
-                Classroom High Scores
+                High Scores by Mode &amp; Time
               </span>
             </div>
           </div>
@@ -78,9 +190,79 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
           </button>
         </div>
 
+        {/* Mode Tabs & Time Sub-Tabs (Hidden automatically if no scores exist) */}
+        {availableModes.length > 0 && (
+          <div className="pt-3.5 space-y-2.5 shrink-0">
+            {/* Top Mode Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {availableModes.map((mode) => {
+                const meta = MODE_META[mode];
+                const isSelected = activeMode === mode;
+                const modeCount = scores.filter((s) => s.mode === mode).length;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setActiveMode(mode)}
+                    className={`flex-1 min-w-[100px] py-2 px-3 rounded-xl border font-display font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      isSelected
+                        ? meta.activeClasses
+                        : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    {meta.icon}
+                    <span>{meta.label}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${
+                        isSelected ? 'bg-slate-950/25' : 'bg-slate-900 text-slate-400'
+                      }`}
+                    >
+                      {modeCount}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Time Option Sub-Tabs */}
+            {availableTimeBuckets.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                {availableTimeBuckets.map((bucket) => {
+                  const isSelected = activeTimeBucket === bucket;
+                  const bucketCount = scores.filter(
+                    (s) => s.mode === activeMode && s.timeBucket === bucket
+                  ).length;
+                  return (
+                    <button
+                      key={bucket}
+                      type="button"
+                      onClick={() => setActiveTimeBucket(bucket)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-slate-100 text-slate-950 border-white shadow-sm'
+                          : 'bg-slate-800/60 border-slate-700/80 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <Clock className="w-3 h-3" />
+                      <span>{formatTimeBucketLabel(bucket)}</span>
+                      <span
+                        className={`text-[10px] font-mono ${
+                          isSelected ? 'text-slate-700' : 'text-slate-400'
+                        }`}
+                      >
+                        ({bucketCount})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Just-Completed Run Banner (when arriving directly from Solo Play) */}
         {lastResult && (
-          <div className="mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-slate-900 border-2 border-amber-400/60 flex items-center justify-between gap-3 shrink-0 shadow-lg shadow-amber-500/10">
+          <div className="mt-3 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-slate-900 border-2 border-amber-400/60 flex items-center justify-between gap-3 shrink-0 shadow-lg shadow-amber-500/10">
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-3xl shrink-0 drop-shadow">{lastResult.playerLogo}</span>
               <div className="min-w-0">
@@ -100,6 +282,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                 </div>
                 <span className="text-xs text-slate-300 font-medium block truncate">
                   {lastResult.totalWords} words · Longest: {lastResult.longestWord || '-'}
+                  {lastResult.timeBucket ? ` · ${formatTimeBucketLabel(lastResult.timeBucket)}` : ''}
                 </span>
               </div>
             </div>
@@ -120,7 +303,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                 Next student ready?
               </span>
               <span className="text-xs text-slate-400 block truncate">
-                Enter your name, pick a logo & play!
+                Pick a player or add your name &amp; logo!
               </span>
             </div>
             <button
@@ -136,19 +319,25 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
 
         {/* Scores Table */}
         <div className="flex-1 overflow-y-auto py-3.5 space-y-2.5 my-1">
-          {scores.length === 0 ? (
+          {filteredScores.length === 0 ? (
             <div className="py-14 text-center text-slate-500 text-sm space-y-2">
               <div className="w-12 h-12 rounded-2xl bg-slate-800/80 mx-auto flex items-center justify-center text-slate-600">
                 <Sparkles className="w-6 h-6" />
               </div>
               <p className="font-bold text-slate-400 text-base">No high scores yet</p>
               <p className="text-xs text-slate-500">
-                Finish a game to set the first class record!
+                Finish a game to set the first record!
               </p>
             </div>
           ) : (
-            scores.map((entry, idx) => {
+            filteredScores.map((entry, idx) => {
               const isJustAdded = lastResult?.entryId && entry.id === lastResult.entryId;
+              const fallbackName =
+                entry.mode === 'team'
+                  ? 'Team'
+                  : entry.mode === 'solo'
+                  ? 'Student'
+                  : 'Quick Player';
               return (
                 <div
                   key={entry.id}
@@ -189,7 +378,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
 
                     <div className="min-w-0">
                       <div className="text-sm sm:text-base font-display font-black text-white truncate flex items-center gap-1.5">
-                        <span>{entry.playerName || 'Quick Player'}</span>
+                        <span>{entry.playerName || fallbackName}</span>
                         {isJustAdded && (
                           <span className="text-[10px] font-black uppercase bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-md">
                             You
@@ -198,6 +387,9 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                       </div>
                       <div className="text-[11px] text-slate-400 font-medium truncate">
                         Best: <span className="font-mono font-bold text-slate-300">{entry.longestWord}</span> · {entry.totalWords} words
+                        {entry.difficulty && (
+                          <span className="ml-1.5 capitalize text-slate-500">· {entry.difficulty}</span>
+                        )}
                       </div>
                     </div>
                   </div>

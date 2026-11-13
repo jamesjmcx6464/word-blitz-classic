@@ -12,26 +12,29 @@ import {
   WordEntry,
   FreePlaySettings,
   DEFAULT_FREE_PLAY_SETTINGS,
+  DifficultyLevel,
+  DIFFICULTY_PRESETS,
   ScreenModeType,
   ClassroomConfig,
   ClassroomMatchState,
   TurnSummary,
 } from './types/game';
 import {
-  HEX_RADIUS,
   SPAWN_Y,
   GROUND_Y,
   BOARD_HEIGHT,
   BOARD_WIDTH_WIDE,
   findLandingY,
   findGroundedHexIds,
-  getBoardWidth,
+  computeScreenSpeedMultiplier,
 } from './utils/hexPhysics';
 import { drawRandomLetter, LetterTileInfo } from './utils/letterBag';
 import { isValidWord, getWordScore } from './data/dictionary';
 import { soundManager } from './utils/audio';
-import { saveHighScore } from './utils/highScores';
-import { getSelectedScreenMode, setSelectedScreenMode, detectDevice } from './utils/screenMode';
+import { saveHighScore, makeTimeBucketKey } from './utils/highScores';
+import { getSavedDifficulty, saveDifficulty } from './utils/difficulty';
+import { recordSoloPlayerResult } from './utils/registeredPlayers';
+import { detectDevice } from './utils/screenMode';
 import { loadClassroomConfig } from './utils/classroomStorage';
 
 import { FreePlaySettingsModal } from './components/FreePlaySettingsModal';
@@ -77,14 +80,27 @@ export default function App() {
   const [isSoloSetupOpen, setIsSoloSetupOpen] = useState<boolean>(false);
   const [isTeamSetupOpen, setIsTeamSetupOpen] = useState<boolean>(false);
 
+  // Selected Difficulty (Easy, Normal, Hard, Nightmare) persisted across sessions
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>(() => getSavedDifficulty());
+  const difficultyRef = useRef<DifficultyLevel>(difficulty);
+  difficultyRef.current = difficulty;
+
   // Dynamic spawn interval tempo & dynamic pace flag (accelerates on word enter)
-  const spawnIntervalRef = useRef<number>(850);
+  const spawnIntervalRef = useRef<number>(DIFFICULTY_PRESETS[difficulty].spawnIntervalMs);
   const dynamicPaceEnabledRef = useRef<boolean>(true);
+  const activeRoundSecondsRef = useRef<number>(60);
+  const lastQuickPlayConfigRef = useRef<{
+    difficulty: DifficultyLevel;
+    timeLimit: number;
+  }>({ difficulty, timeLimit: 60 });
 
   // Screen Mode: 'pc' (about half width) vs 'phone' (fits screen) - automatically detected by device
   const [screenMode, setScreenMode] = useState<ScreenModeType>(() => detectDevice());
   const screenModeRef = useRef<ScreenModeType>(screenMode);
   screenModeRef.current = screenMode;
+
+  // Proportional falling/moving speed multiplier computed from play area size (desktop ref = 1.0)
+  const speedMultiplierRef = useRef<number>(1.0);
 
   // Auto-detect device mode on resize/orientation change
   useEffect(() => {
@@ -95,17 +111,15 @@ export default function App() {
     };
 
     window.addEventListener('resize', handleDeviceCheck);
-    return () => window.removeEventListener('resize', handleDeviceCheck);
+    window.addEventListener('orientationchange', handleDeviceCheck);
+    return () => {
+      window.removeEventListener('resize', handleDeviceCheck);
+      window.removeEventListener('orientationchange', handleDeviceCheck);
+    };
   }, []);
 
   // ViewMode layout derived strictly from screenMode: 'pc' -> 'wide', 'phone' -> 'narrow'
   const viewMode: ViewMode = screenMode === 'pc' ? 'wide' : 'narrow';
-
-  const handleSelectScreenMode = useCallback((newScreen: ScreenModeType) => {
-    setScreenMode(newScreen);
-    screenModeRef.current = newScreen;
-    setSelectedScreenMode(newScreen);
-  }, []);
 
   // Score tracking
   const [score, setScore] = useState<number>(0);
@@ -207,6 +221,21 @@ export default function App() {
     }
   };
 
+  const handleChangeDifficulty = (level: DifficultyLevel) => {
+    setDifficulty(level);
+    difficultyRef.current = level;
+    saveDifficulty(level);
+    const preset = DIFFICULTY_PRESETS[level];
+    spawnIntervalRef.current = preset.spawnIntervalMs;
+    handleUpdateFreePlaySettings({
+      ...freePlaySettingsRef.current,
+      dropSpeed: preset.dropSpeed,
+      tileRadius: preset.tileRadius,
+      ceilingHeight: preset.ceilingHeight,
+      speedIncreaseRate: preset.speedIncreaseRate,
+    });
+  };
+
   // Settings Modal State
   const [isFreePlaySettingsOpen, setIsFreePlaySettingsOpen] = useState<boolean>(false);
   const [isSpellingSetupOpen, setIsSpellingSetupOpen] = useState<boolean>(false);
@@ -292,17 +321,21 @@ export default function App() {
   const boardWidthRef = useRef<number>(boardWidth);
   boardWidthRef.current = boardWidth;
 
-  // Dynamically observe board container size so the game area stretches across the screen
+  // Dynamically observe board container size so the game area stretches and speed scales proportionally
   useEffect(() => {
     const updateDimensions = () => {
       const el = boardContainerRef.current;
       if (!el) {
         if (typeof window !== 'undefined') {
-          const availW = Math.max(420, window.innerWidth - 32);
-          const availH = Math.max(300, window.innerHeight - 170);
-          const computed = Math.max(480, Math.round(BOARD_HEIGHT * (availW / availH)));
+          const estW =
+            screenModeRef.current === 'pc'
+              ? Math.max(480, Math.min(window.innerWidth * 0.5, window.innerWidth)) - 16
+              : Math.max(280, window.innerWidth - 16);
+          const estH = Math.max(260, window.innerHeight - 170);
+          const computed = Math.max(480, Math.round(BOARD_HEIGHT * (estW / estH)));
           setBoardWidth(computed);
           boardWidthRef.current = computed;
+          speedMultiplierRef.current = computeScreenSpeedMultiplier(estW, estH);
         }
         return;
       }
@@ -311,6 +344,7 @@ export default function App() {
         const computed = Math.max(480, Math.round(BOARD_HEIGHT * (rect.width / rect.height)));
         setBoardWidth(computed);
         boardWidthRef.current = computed;
+        speedMultiplierRef.current = computeScreenSpeedMultiplier(rect.width, rect.height);
       }
     };
 
@@ -322,12 +356,14 @@ export default function App() {
       observer.observe(el);
     }
     window.addEventListener('resize', updateDimensions);
+    window.addEventListener('orientationchange', updateDimensions);
 
     return () => {
       if (observer) observer.disconnect();
       window.removeEventListener('resize', updateDimensions);
+      window.removeEventListener('orientationchange', updateDimensions);
     };
-  }, [screen]);
+  }, [screen, screenMode]);
 
   // Active ceiling Y coordinate
   const activeCeilingY = freePlaySettings.ceilingHeight;
@@ -354,24 +390,40 @@ export default function App() {
 
   // Trigger Game Over (Solo play & Quick Play)
   const triggerGameOver = useCallback((customReason?: string) => {
+    if (screenRef.current !== 'PLAYING') return;
+
     soundManager.playGameOver();
     const reasonText = customReason || 'The letters reached the top!';
     setGameOverReason(reasonText);
 
     const activePlayer = currentSoloPlayerRef.current;
-    const stats = saveHighScore(
-      scoreRef.current,
-      longestWordRef.current,
-      totalWordsClearedRef.current,
-      activePlayer?.name,
-      activePlayer?.logo
-    );
+    const roundSec = activeRoundSecondsRef.current;
+    const timeBucket = makeTimeBucketKey('timer', roundSec);
+    const mode = activePlayer ? 'solo' : 'quick';
+
+    if (activePlayer) {
+      recordSoloPlayerResult(activePlayer.name, activePlayer.logo, scoreRef.current);
+    }
+
+    const stats = saveHighScore({
+      mode,
+      timeBucket,
+      timeSeconds: roundSec,
+      difficulty: difficultyRef.current,
+      score: scoreRef.current,
+      longestWord: longestWordRef.current,
+      totalWords: totalWordsClearedRef.current,
+      playerName: activePlayer?.name,
+      playerLogo: activePlayer?.logo,
+    });
     setGameOverStats({ rank: stats.rank, isNewHighScore: stats.isNewHighScore });
 
     if (activePlayer) {
-      // Classroom Solo Play: record score on leaderboard and go straight to Leaderboard screen
+      // Classroom Solo Play: record score in Solo bucket and go straight to Leaderboard screen
       setLastSoloResult({
         entryId: stats.entryId,
+        mode: 'solo',
+        timeBucket,
         playerName: activePlayer.name,
         playerLogo: activePlayer.logo,
         score: scoreRef.current,
@@ -453,6 +505,33 @@ export default function App() {
       classroomMatchRef.current = updatedMatch;
 
       if (isFinished) {
+        // Save each team's match score into the Team Play leaderboard bucket
+        const teamBucket =
+          cur.config.turnCondition === 'timer'
+            ? makeTimeBucketKey('timer', cur.config.turnSeconds)
+            : makeTimeBucketKey('words', cur.config.turnWordsTarget);
+        const teamTimeSec =
+          cur.config.turnCondition === 'timer' ? cur.config.turnSeconds : undefined;
+
+        updatedTeams.forEach((team) => {
+          const teamLongest = team.wordsFound.reduce(
+            (max, w) => (w.word.length > max.length ? w.word : max),
+            ''
+          );
+          saveHighScore({
+            mode: 'team',
+            timeBucket: teamBucket,
+            timeSeconds: teamTimeSec,
+            difficulty: difficultyRef.current,
+            score: team.score,
+            longestWord: teamLongest || '-',
+            totalWords: team.wordsFound.length,
+            playerName: team.name,
+            playerLogo: team.emoji,
+            allowZeroScore: true,
+          });
+        });
+
         setScreen('CLASSROOM_VICTORY');
       } else {
         setScreen('CLASSROOM_TURN_TRANSITION');
@@ -586,6 +665,8 @@ export default function App() {
     setClassroomMatch(null);
     classroomMatchRef.current = null;
 
+    const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+
     setScore(0);
     scoreRef.current = 0;
     setLongestWord('');
@@ -605,8 +686,8 @@ export default function App() {
     lastTimeRef.current = performance.now();
 
     spellingBag.reset();
-    freePlaySpeedRef.current = overrides?.dropSpeed ?? freePlaySettingsRef.current.dropSpeed;
-    spawnIntervalRef.current = overrides?.spawnIntervalMs ?? 850;
+    freePlaySpeedRef.current = overrides?.dropSpeed ?? freePlaySettingsRef.current.dropSpeed ?? preset.dropSpeed;
+    spawnIntervalRef.current = overrides?.spawnIntervalMs ?? preset.spawnIntervalMs;
     dynamicPaceEnabledRef.current =
       overrides?.dynamicPace ?? freePlaySettingsRef.current.speedIncreaseEnabled;
 
@@ -614,6 +695,8 @@ export default function App() {
       overrides?.timeLimit !== undefined
         ? overrides.timeLimit
         : freePlaySettingsRef.current.timeLimit;
+    activeRoundSecondsRef.current = effectiveTimeLimit;
+
     if (effectiveTimeLimit > 0) {
       setFreePlayTimeLeft(effectiveTimeLimit);
     } else {
@@ -627,30 +710,51 @@ export default function App() {
     }, 300);
   };
 
-  // Quick Play: Immediate start with basic defaults (1 min timer, default fall/spawn speed, pace rises on word enter)
-  const handleQuickPlay = () => {
+  // Start Quick Play using a specific DifficultyLevel & timeLimit
+  const launchQuickPlayWithConfig = (diffLevel: DifficultyLevel, timeLimitSec: number) => {
     setCurrentSoloPlayer(null);
     currentSoloPlayerRef.current = null;
     setLastSoloResult(null);
 
+    const preset = DIFFICULTY_PRESETS[diffLevel];
+    lastQuickPlayConfigRef.current = {
+      difficulty: diffLevel,
+      timeLimit: timeLimitSec,
+    };
+
     const quickSettings: FreePlaySettings = {
       ...DEFAULT_FREE_PLAY_SETTINGS,
+      dropSpeed: preset.dropSpeed,
+      tileRadius: preset.tileRadius,
+      ceilingHeight: preset.ceilingHeight,
+      speedIncreaseRate: preset.speedIncreaseRate,
       spellingWordsList: freePlaySettingsRef.current.spellingWordsList,
       spellingWordsEnabled: false,
-      timeLimit: 60,
+      timeLimit: timeLimitSec,
       speedIncreaseEnabled: true,
     };
     handleUpdateFreePlaySettings(quickSettings);
 
     handleStartGame({
-      timeLimit: 60,
-      dropSpeed: DEFAULT_FREE_PLAY_SETTINGS.dropSpeed,
-      spawnIntervalMs: 850,
+      timeLimit: timeLimitSec,
+      dropSpeed: preset.dropSpeed,
+      spawnIntervalMs: preset.spawnIntervalMs,
       dynamicPace: true,
     });
   };
 
-  // Named Solo Play (Classroom student enters name, picks logo, chooses words & timer)
+  // Quick Play: Immediate start with active Difficulty defaults (1 min timer, pace rises on word enter)
+  const handleQuickPlay = () => {
+    launchQuickPlayWithConfig(difficultyRef.current, 60);
+  };
+
+  // Quick Play "Play Again": restart Quick Play with the exact same settings as the finished run
+  const handleQuickPlayAgain = () => {
+    const { difficulty: savedDiff, timeLimit } = lastQuickPlayConfigRef.current;
+    launchQuickPlayWithConfig(savedDiff, timeLimit);
+  };
+
+  // Named Solo Play (Classroom student picks/enters name, logo, words & timer; uses selected Difficulty)
   const handleStartNamedSolo = (
     playerName: string,
     playerLogo: string,
@@ -663,9 +767,13 @@ export default function App() {
     setLastSoloResult(null);
     setIsSoloSetupOpen(false);
 
+    const preset = DIFFICULTY_PRESETS[difficultyRef.current];
     const soloSettings: FreePlaySettings = {
       ...freePlaySettingsRef.current,
-      dropSpeed: DEFAULT_FREE_PLAY_SETTINGS.dropSpeed,
+      dropSpeed: preset.dropSpeed,
+      tileRadius: preset.tileRadius,
+      ceilingHeight: preset.ceilingHeight,
+      speedIncreaseRate: preset.speedIncreaseRate,
       spellingWordsEnabled: useWordList,
       timeLimit: roundSeconds,
       speedIncreaseEnabled: true,
@@ -674,14 +782,24 @@ export default function App() {
 
     handleStartGame({
       timeLimit: roundSeconds,
-      dropSpeed: DEFAULT_FREE_PLAY_SETTINGS.dropSpeed,
-      spawnIntervalMs: 850,
+      dropSpeed: preset.dropSpeed,
+      spawnIntervalMs: preset.spawnIntervalMs,
       dynamicPace: true,
     });
   };
 
   // Classroom: Start Match from Setup
   const handleStartClassroomMatch = (config: ClassroomConfig) => {
+    const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+    handleUpdateFreePlaySettings({
+      ...freePlaySettingsRef.current,
+      dropSpeed: preset.dropSpeed,
+      tileRadius: preset.tileRadius,
+      ceilingHeight: preset.ceilingHeight,
+      speedIncreaseRate: preset.speedIncreaseRate,
+    });
+    spawnIntervalRef.current = preset.spawnIntervalMs;
+
     const initialState: ClassroomMatchState = {
       config,
       currentTeamIndex: 0,
@@ -705,6 +823,9 @@ export default function App() {
     if (!classroomMatchRef.current) return;
     const cur = classroomMatchRef.current;
     const activeTeam = cur.config.teams[cur.currentTeamIndex];
+    const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+    spawnIntervalRef.current = preset.spawnIntervalMs;
+    freePlaySpeedRef.current = preset.dropSpeed;
 
     // Clear board if cleanBoardEachTurn is enabled
     if (cur.config.cleanBoardEachTurn) {
@@ -785,21 +906,29 @@ export default function App() {
     setScreen('MENU');
   };
 
-  // Trigger pulse animation in place without moving or jumping
+  // Brief light flash feedback in place without moving or scaling
+  const pulseTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const triggerTilePulse = (tileId: string) => {
+    const existingTimer = pulseTimeoutsRef.current.get(tileId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
     setPulsingTileIds((prev) => {
       const next = new Set(prev);
       next.add(tileId);
       return next;
     });
 
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      pulseTimeoutsRef.current.delete(tileId);
       setPulsingTileIds((prev) => {
         const next = new Set(prev);
         next.delete(tileId);
         return next;
       });
-    }, 180);
+    }, 175);
+    pulseTimeoutsRef.current.set(tileId, timer);
   };
 
   // Tile Selection Toggle
@@ -857,10 +986,17 @@ export default function App() {
       !classroomMatchRef.current &&
       (dynamicPaceEnabledRef.current || freePlaySettingsRef.current.speedIncreaseEnabled)
     ) {
-      const baseSpeed = freePlaySettingsRef.current.dropSpeed || 260;
-      const bump = 1 + (freePlaySettingsRef.current.speedIncreaseRate || 10) / 100;
-      freePlaySpeedRef.current = Math.min(freePlaySpeedRef.current * bump, baseSpeed * 3.5);
-      spawnIntervalRef.current = Math.max(300, Math.round(spawnIntervalRef.current * 0.92));
+      const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+      const baseSpeed = freePlaySettingsRef.current.dropSpeed || preset.dropSpeed;
+      const bump = 1 + (freePlaySettingsRef.current.speedIncreaseRate || preset.speedIncreaseRate) / 100;
+      freePlaySpeedRef.current = Math.min(
+        freePlaySpeedRef.current * bump,
+        baseSpeed * preset.maxSpeedMultiplier
+      );
+      spawnIntervalRef.current = Math.max(
+        preset.minSpawnIntervalMs,
+        Math.round(spawnIntervalRef.current * preset.spawnAccelFactor)
+      );
     }
   };
 
@@ -1075,11 +1211,13 @@ export default function App() {
 
       const curCeiling = freePlaySettingsRef.current.ceilingHeight;
       const effectiveGroundY = GROUND_Y;
-      const activeFallSpeed =
+      const baseFallSpeed =
         !classroomMatchRef.current &&
         (dynamicPaceEnabledRef.current || freePlaySettingsRef.current.speedIncreaseEnabled)
           ? freePlaySpeedRef.current
           : freePlaySettingsRef.current.dropSpeed;
+      // Apply screen-size multiplier on top of base/difficulty speed in ALL modes
+      const activeFallSpeed = baseFallSpeed * speedMultiplierRef.current;
 
       // 1. Update falling hexagons
       const currentFallingList = [...fallingTilesRef.current];
@@ -1170,10 +1308,15 @@ export default function App() {
       }
 
       // 3. Continuous spawn cadence (accelerates dynamically as spawnIntervalRef decreases)
+      const preset = DIFFICULTY_PRESETS[difficultyRef.current];
       const isWideBoard = boardWidthRef.current > 850;
-      const baseInterval = spawnIntervalRef.current || 850;
-      const SPAWN_INTERVAL_MS = Math.max(280, isWideBoard ? Math.round(baseInterval * 0.85) : baseInterval);
-      const MAX_IN_FLIGHT = boardWidthRef.current > 1200 ? 5 : isWideBoard ? 4 : 3;
+      const baseInterval = spawnIntervalRef.current || preset.spawnIntervalMs;
+      const SPAWN_INTERVAL_MS = Math.max(
+        preset.minSpawnIntervalMs,
+        isWideBoard ? Math.round(baseInterval * 0.85) : baseInterval
+      );
+      const baseMaxInFlight = boardWidthRef.current > 1200 ? 5 : isWideBoard ? 4 : 3;
+      const MAX_IN_FLIGHT = Math.max(2, baseMaxInFlight + preset.maxInFlightOffset);
       if (fallingTilesRef.current.length < MAX_IN_FLIGHT) {
         if (currentTime >= spawnTimerRef.current) {
           spawnTimerRef.current = currentTime + SPAWN_INTERVAL_MS;
@@ -1215,6 +1358,8 @@ export default function App() {
           soundEnabled={soundEnabled}
           onToggleSound={handleToggleSound}
           screenMode={screenMode}
+          difficulty={difficulty}
+          onChangeDifficulty={handleChangeDifficulty}
         />
       )}
 
@@ -1413,15 +1558,19 @@ export default function App() {
           onRestart={
             classroomMatch
               ? handleStartClassroomTurn
-              : () =>
-                  currentSoloPlayer
-                    ? handleStartGame({
-                        timeLimit: freePlaySettingsRef.current.timeLimit || 60,
-                        dropSpeed: DEFAULT_FREE_PLAY_SETTINGS.dropSpeed,
-                        spawnIntervalMs: 850,
-                        dynamicPace: true,
-                      })
-                    : handleQuickPlay()
+              : () => {
+                  const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+                  if (currentSoloPlayer) {
+                    handleStartGame({
+                      timeLimit: freePlaySettingsRef.current.timeLimit || 60,
+                      dropSpeed: preset.dropSpeed,
+                      spawnIntervalMs: preset.spawnIntervalMs,
+                      dynamicPace: true,
+                    });
+                  } else {
+                    handleQuickPlayAgain();
+                  }
+                }
           }
           onQuitToMenu={classroomMatch ? handleExitClassroomToMenu : () => setScreen('MENU')}
           soundEnabled={soundEnabled}
@@ -1448,11 +1597,9 @@ export default function App() {
           totalWords={totalWordsCleared}
           rank={gameOverStats.rank}
           isNewHighScore={gameOverStats.isNewHighScore}
-          onNewGame={handleQuickPlay}
-          onViewHighScores={() => setScreen('HIGHSCORES')}
+          onNewGame={handleQuickPlayAgain}
           onBackToMenu={() => setScreen('MENU')}
           reason={gameOverReason}
-          onViewWords={() => setIsWordHistoryOpen(true)}
           wordEntries={wordHistory}
           spellingWords={
             freePlaySettings.spellingWordsEnabled
