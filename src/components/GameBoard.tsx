@@ -75,7 +75,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     selectedMap.set(tile.id, index + 1);
   });
 
-  // Handle pointer down (mouse click or mobile touch) using exact polygon hit testing
+  const activeFalling = React.useMemo(() => {
+    const raw = propFallingTiles
+      ? propFallingTiles
+      : fallingTile
+      ? [fallingTile]
+      : [];
+    const seen = new Set<string>();
+    return raw.filter((t) => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }, [propFallingTiles, fallingTile]);
+
+  // Handle pointer down (mouse click or mobile touch) using exact polygon hit testing on current animated positions
   const handleBoardPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
     if (!svg) return;
@@ -91,11 +105,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const px = svgCoord.x;
     const py = svgCoord.y;
 
-    // Find any frozen tile whose full 6-sided hexagon shape (corners included) contains (px, py)
+    // Hit-test both falling tiles and landed/collapsing tiles at their current animated coordinates
     let bestTile: HexTile | null = null;
     let minDistanceSq = Infinity;
 
-    for (const tile of uniqueFrozenTiles) {
+    for (const tile of [...activeFalling, ...uniqueFrozenTiles]) {
       if (tile.isClearing) continue;
 
       if (isPointInHex(px, py, tile.x, tile.y, tileRadius)) {
@@ -118,7 +132,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   // Proposal 1: Coordinated GSAP tile clearing timeline (flash, 1.25x anticipation pop, shard dispersion shrink)
   useEffect(() => {
-    const clearingTiles = uniqueFrozenTiles.filter((t) => t.isClearing);
+    const allTiles = [...uniqueFrozenTiles, ...activeFalling];
+    const clearingTiles = allTiles.filter((t) => t.isClearing);
     if (clearingTiles.length === 0) return;
 
     const prefersReducedMotion =
@@ -157,13 +172,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     });
 
     // Cleanup unmounted tile IDs from tracker
-    const liveIds = new Set(uniqueFrozenTiles.map((t) => t.id));
+    const liveIds = new Set(allTiles.map((t) => t.id));
     for (const id of clearingAnimatedRef.current) {
       if (!liveIds.has(id)) {
         clearingAnimatedRef.current.delete(id);
       }
     }
-  }, [uniqueFrozenTiles]);
+  }, [uniqueFrozenTiles, activeFalling]);
 
   // Proposal 1: Subtle elastic bounce (ease: 'back.out(1.4)') when column tiles drop into new rest positions
   useEffect(() => {
@@ -517,52 +532,103 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </g>
 
         {/* Falling Hexagons */}
-        {(() => {
-          const activeFalling = propFallingTiles
-            ? propFallingTiles
-            : fallingTile
-            ? [fallingTile]
-            : [];
+        <g pointerEvents="none">
+          {activeFalling.map((ft) => {
+            const isSelected = selectedMap.has(ft.id);
+            const selectionNum = selectedMap.get(ft.id);
+            const isClearing = ft.isClearing;
+            const isPulsing = pulsingTileIds.has(ft.id);
 
-          return activeFalling.map((ft) => (
-            <g
-              key={ft.id}
-              pointerEvents="none"
-              style={{
-                transformOrigin: `${ft.x}px ${ft.y}px`,
-              }}
-            >
-              <polygon
-                points={getHexPolygonPoints(ft.x, ft.y, tileRadius - 0.5)}
-                fill="url(#fallingGradient)"
-                stroke="#0891b2"
-                strokeWidth="2"
-                filter="url(#fallingGlow)"
-              />
+            const fill = isClearing
+              ? 'url(#clearingGradient)'
+              : isSelected
+              ? 'url(#selectedGradient)'
+              : 'url(#fallingGradient)';
 
-              <polygon
-                points={getHexPolygonPoints(ft.x, ft.y, Math.max(1, tileRadius - 3 * scale))}
-                fill="none"
-                stroke="#ffffff"
-                strokeWidth="1.2"
-                opacity="0.6"
-              />
+            const stroke = isClearing
+              ? '#22c55e'
+              : isSelected
+              ? '#ca8a04'
+              : '#0891b2';
 
-              <text
-                x={ft.x}
-                y={ft.y + 1}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize={ft.letter.display.length > 1 ? multiLetterFontSize : singleLetterFontSize}
-                fontWeight="900"
-                fill="#083344"
-                className="font-display select-none tracking-tight"
+            const textFill = isClearing ? '#14532d' : isSelected ? '#713f12' : '#083344';
+            const filterEffect = isSelected ? 'url(#selectGlow)' : 'url(#fallingGlow)';
+
+            return (
+              <g
+                id={`hex-tile-${ft.id}`}
+                key={ft.id}
               >
-                {ft.letter.display}
-              </text>
-            </g>
-          ));
-        })()}
+                <polygon
+                  points={getHexPolygonPoints(ft.x, ft.y, tileRadius - 0.5)}
+                  fill={fill}
+                  stroke={isPulsing ? '#fef08a' : stroke}
+                  strokeWidth={isPulsing || isSelected ? '2.5' : '2'}
+                  filter={filterEffect}
+                />
+
+                <polygon
+                  points={getHexPolygonPoints(ft.x, ft.y, Math.max(1, tileRadius - 3 * scale))}
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth={isPulsing ? '1.8' : '1.2'}
+                  opacity={isPulsing ? 0.9 : 0.6}
+                />
+
+                {/* Brief light flash / shimmer overlay on press (no motion) */}
+                {isPulsing && (
+                  <polygon
+                    points={getHexPolygonPoints(ft.x, ft.y, tileRadius - 0.5)}
+                    fill="url(#pressFlashGradient)"
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                    className="animate-hex-flash"
+                    pointerEvents="none"
+                  />
+                )}
+
+                <text
+                  x={ft.x}
+                  y={ft.y + 1}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={ft.letter.display.length > 1 ? multiLetterFontSize : singleLetterFontSize}
+                  fontWeight="900"
+                  fill={textFill}
+                  className="font-display select-none tracking-tight"
+                >
+                  {ft.letter.display}
+                </text>
+
+                {/* Selection sequence badge */}
+                {isSelected && (
+                  <g>
+                    <circle
+                      cx={ft.x + tileRadius - 9 * scale}
+                      cy={ft.y - 12 * scale}
+                      r={(isPhone ? 6.5 : 8) * scale}
+                      fill="#0f172a"
+                      stroke="#facc15"
+                      strokeWidth={isPhone ? 1.5 * scale : 1.8 * scale}
+                    />
+                    <text
+                      x={ft.x + tileRadius - 9 * scale}
+                      y={ft.y - 11.5 * scale}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize={((isPhone ? 7.5 : 9) * scale).toFixed(1)}
+                      fontWeight="900"
+                      fill="#facc15"
+                      className="font-mono select-none"
+                    >
+                      {selectionNum}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+        </g>
 
         {/* Floating Scores */}
         <g pointerEvents="none">

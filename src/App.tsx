@@ -931,9 +931,9 @@ export default function App() {
     pulseTimeoutsRef.current.set(tileId, timer);
   };
 
-  // Tile Selection Toggle
+  // Tile Selection Toggle (allows both falling and landed tiles)
   const handleTileClick = (tile: HexTile) => {
-    if (screen !== 'PLAYING' || !tile.isFrozen || tile.isClearing) return;
+    if (screen !== 'PLAYING' || tile.isClearing) return;
 
     setErrorMessage(null);
     triggerTilePulse(tile.id);
@@ -1083,9 +1083,13 @@ export default function App() {
       });
     }
 
-    // Floating score popup at centroid
-    const avgX = selectedTiles.reduce((sum, t) => sum + t.x, 0) / selectedTiles.length;
-    const avgY = selectedTiles.reduce((sum, t) => sum + t.y, 0) / selectedTiles.length;
+    // Floating score popup at live centroid (falling tiles may have moved since selection)
+    const liveTileLookup = new Map<string, HexTile>();
+    for (const t of frozenTilesRef.current) liveTileLookup.set(t.id, t);
+    for (const t of fallingTilesRef.current) liveTileLookup.set(t.id, t);
+    const liveSelected = selectedTiles.map((t) => liveTileLookup.get(t.id) || t);
+    const avgX = liveSelected.reduce((sum, t) => sum + t.x, 0) / liveSelected.length;
+    const avgY = liveSelected.reduce((sum, t) => sum + t.y, 0) / liveSelected.length;
 
     const newScorePopup: FloatingScore = {
       id: 'score_' + Date.now(),
@@ -1121,12 +1125,16 @@ export default function App() {
       }
     }
 
-    // 1. Mark submitted tiles as clearing
+    // 1. Mark submitted tiles (landed or still falling) as clearing
     const selectedIds = new Set(selectedTiles.map((t) => t.id));
     frozenTilesRef.current = frozenTilesRef.current.map((t) =>
       selectedIds.has(t.id) ? { ...t, isClearing: true } : t
     );
+    fallingTilesRef.current = fallingTilesRef.current.map((t) =>
+      selectedIds.has(t.id) ? { ...t, isClearing: true } : t
+    );
     setFrozenTiles([...frozenTilesRef.current]);
+    setFallingTiles([...fallingTilesRef.current]);
     setSelectedTiles([]);
     setErrorMessage(null);
 
@@ -1137,6 +1145,10 @@ export default function App() {
     const collapseDelayMs = prefersReducedMotion ? 40 : 320;
 
     setTimeout(() => {
+      const remainingFalling = fallingTilesRef.current.filter((t) => !selectedIds.has(t.id));
+      fallingTilesRef.current = remainingFalling;
+      setFallingTiles(remainingFalling);
+
       const remainingTiles = frozenTilesRef.current.filter((t) => !selectedIds.has(t.id));
 
       // Identify which tiles remain connected to ground
@@ -1229,6 +1241,11 @@ export default function App() {
         let anyLanded = false;
 
         for (const tile of currentFallingList) {
+          if (tile.isClearing) {
+            remainingFalling.push(tile);
+            continue;
+          }
+
           const liveLandingY = findLandingY(tile.x, tile.y, liveFrozen, effectiveGroundY, curTileRadius);
           const nextY = tile.y + activeFallSpeed * dt;
 
@@ -1274,7 +1291,7 @@ export default function App() {
       }
 
       // 2. Animate disconnected tiles falling
-      const fallingGrounded = frozenTilesRef.current.filter((t) => t.isFalling);
+      const fallingGrounded = frozenTilesRef.current.filter((t) => t.isFalling && !t.isClearing);
       if (fallingGrounded.length > 0) {
         fallingGrounded.sort((a, b) => b.y - a.y);
         const liveFrozen = frozenTilesRef.current.filter((t) => t.isFrozen);
@@ -1317,7 +1334,8 @@ export default function App() {
       );
       const baseMaxInFlight = boardWidthRef.current > 1200 ? 5 : isWideBoard ? 4 : 3;
       const MAX_IN_FLIGHT = Math.max(2, baseMaxInFlight + preset.maxInFlightOffset);
-      if (fallingTilesRef.current.length < MAX_IN_FLIGHT) {
+      const activeFallingCount = fallingTilesRef.current.filter((t) => !t.isClearing).length;
+      if (activeFallingCount < MAX_IN_FLIGHT) {
         if (currentTime >= spawnTimerRef.current) {
           spawnTimerRef.current = currentTime + SPAWN_INTERVAL_MS;
           spawnNextHexagon();
