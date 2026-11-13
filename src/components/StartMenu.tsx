@@ -27,12 +27,16 @@ interface StartMenuProps {
   onChangeDifficulty: (level: DifficultyLevel) => void;
 }
 
-const DIFFICULTY_ORDER: DifficultyLevel[] = ['easy', 'normal', 'hard', 'nightmare'];
+const DIFFICULTY_ORDER: DifficultyLevel[] = ['beginner', 'easy', 'normal', 'hard', 'nightmare'];
 
 const DIFFICULTY_STYLE: Record<
   DifficultyLevel,
   { activeClass: string; badgeText: string }
 > = {
+  beginner: {
+    activeClass: 'bg-sky-400 text-slate-950 border-sky-200 shadow-md shadow-sky-400/20',
+    badgeText: 'text-sky-300',
+  },
   easy: {
     activeClass: 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-md shadow-emerald-500/20',
     badgeText: 'text-emerald-300',
@@ -244,7 +248,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
             {DIFFICULTY_ORDER.map((lvl) => {
               const preset = DIFFICULTY_PRESETS[lvl];
               const isSelected = difficulty === lvl;
@@ -253,7 +257,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
                   key={lvl}
                   type="button"
                   onClick={() => onChangeDifficulty(lvl)}
-                  className={`min-h-[40px] px-2 py-1.5 rounded-xl border-2 font-display font-black text-xs sm:text-sm transition-all cursor-pointer active:scale-95 ${
+                  className={`min-h-[40px] px-1.5 py-1.5 rounded-xl border-2 font-display font-black text-xs transition-all cursor-pointer active:scale-95 ${
                     isSelected
                       ? DIFFICULTY_STYLE[lvl].activeClass
                       : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-800 hover:border-slate-600'

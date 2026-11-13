@@ -61,7 +61,7 @@ export interface FreePlaySettings {
   spellingWordsList: string; // text list of words entered by player/teacher/parent
 }
 
-export type DifficultyLevel = 'easy' | 'normal' | 'hard' | 'nightmare';
+export type DifficultyLevel = 'beginner' | 'easy' | 'normal' | 'hard' | 'nightmare';
 
 export type LeaderboardMode = 'quick' | 'solo' | 'team';
 
@@ -72,7 +72,7 @@ export interface DifficultyConfig {
   dropSpeed: number; // constant base fall speed (px/sec in reference viewBox)
   spawnIntervalMs: number; // base spawn interval in ms
   minSpawnIntervalMs: number; // floor when pace accelerates
-  spawnAccelFactor: number; // multiplier per word submitted (e.g. 0.92)
+  spawnAccelFactor: number; // multiplier per word submitted
   speedIncreaseRate: number; // % speed increase per word submitted
   maxSpeedMultiplier: number; // max multiplier over base dropSpeed
   ceilingHeight: number; // danger line Y coordinate
@@ -81,9 +81,37 @@ export interface DifficultyConfig {
 }
 
 export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
+  beginner: {
+    id: 'beginner',
+    label: 'Beginner',
+    description: 'Very gentle pace · Largest tiles',
+    dropSpeed: 85,
+    spawnIntervalMs: 2200,
+    minSpawnIntervalMs: 900,
+    spawnAccelFactor: 0.98,
+    speedIncreaseRate: 2,
+    maxSpeedMultiplier: 1.6,
+    ceilingHeight: 45,
+    tileRadius: 34,
+    maxInFlightOffset: -2,
+  },
   easy: {
     id: 'easy',
     label: 'Easy',
+    description: 'Relaxed pace · Big tiles',
+    dropSpeed: 120,
+    spawnIntervalMs: 1650,
+    minSpawnIntervalMs: 650,
+    spawnAccelFactor: 0.97,
+    speedIncreaseRate: 3,
+    maxSpeedMultiplier: 1.9,
+    ceilingHeight: 50,
+    tileRadius: 32,
+    maxInFlightOffset: -1,
+  },
+  normal: {
+    id: 'normal',
+    label: 'Normal',
     description: 'Gentle pace · Larger tiles',
     dropSpeed: 170,
     spawnIntervalMs: 1200,
@@ -95,10 +123,10 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     tileRadius: 31,
     maxInFlightOffset: -1,
   },
-  normal: {
-    id: 'normal',
-    label: 'Normal',
-    description: 'Balanced classic pace',
+  hard: {
+    id: 'hard',
+    label: 'Hard',
+    description: 'Classic fast pace',
     dropSpeed: 260,
     spawnIntervalMs: 850,
     minSpawnIntervalMs: 300,
@@ -109,45 +137,31 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     tileRadius: 28,
     maxInFlightOffset: 0,
   },
-  hard: {
-    id: 'hard',
-    label: 'Hard',
-    description: 'Fast drops · Higher ceiling',
-    dropSpeed: 340,
-    spawnIntervalMs: 640,
-    minSpawnIntervalMs: 230,
-    spawnAccelFactor: 0.9,
-    speedIncreaseRate: 14,
-    maxSpeedMultiplier: 4.0,
-    ceilingHeight: 105,
-    tileRadius: 26,
-    maxInFlightOffset: 1,
-  },
   nightmare: {
     id: 'nightmare',
     label: 'Nightmare',
-    description: 'Extreme speed & spawns',
-    dropSpeed: 430,
-    spawnIntervalMs: 460,
-    minSpawnIntervalMs: 180,
-    spawnAccelFactor: 0.88,
-    speedIncreaseRate: 18,
-    maxSpeedMultiplier: 4.5,
-    ceilingHeight: 130,
-    tileRadius: 25,
-    maxInFlightOffset: 2,
+    description: 'Extreme speed & higher ceiling',
+    dropSpeed: 360,
+    spawnIntervalMs: 580,
+    minSpawnIntervalMs: 210,
+    spawnAccelFactor: 0.89,
+    speedIncreaseRate: 15,
+    maxSpeedMultiplier: 4.2,
+    ceilingHeight: 115,
+    tileRadius: 26,
+    maxInFlightOffset: 1,
   },
 };
 
 export const DEFAULT_FREE_PLAY_SETTINGS: FreePlaySettings = {
-  dropSpeed: 260,
+  dropSpeed: 170,
   spawnDelayMs: 80,
   timeLimit: 0,
-  tileRadius: 28,
+  tileRadius: 31,
   speedIncreaseEnabled: false,
-  speedIncreaseRate: 10,
+  speedIncreaseRate: 5,
   wallWidthPct: 100,
-  ceilingHeight: 85,
+  ceilingHeight: 60,
   spellingWordsEnabled: false,
   spellingWordsList: 'CAT, DOG, BIRD, FISH, TREE, BOOK, STAR, PLAY',
 };

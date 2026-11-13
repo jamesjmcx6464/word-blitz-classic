@@ -130,6 +130,7 @@ function migrateEntry(raw: Record<string, unknown>): {
     timeBucket,
     timeSeconds,
     difficulty:
+      raw.difficulty === 'beginner' ||
       raw.difficulty === 'easy' ||
       raw.difficulty === 'normal' ||
       raw.difficulty === 'hard' ||
