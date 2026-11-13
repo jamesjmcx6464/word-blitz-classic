@@ -1,0 +1,8 @@
+{
+  "name": "Word Blitz Classic",
+  "description": "Fast-paced hexagonal falling-letter word puzzle game. Spell words to clear hexagonal tiles before the stack reaches the top.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
