@@ -110,11 +110,11 @@ function drawFrom(pool: Array<{ letter: string; weight: number }>): string {
   return pool[pool.length - 1].letter;
 }
 
-export function drawBalancedLetter(): LetterTileInfo {
+export function drawBalancedLetter(limit: number = BALANCE_STREAK_LIMIT): LetterTileInfo {
   let chosen: string;
-  if (streakCount >= BALANCE_STREAK_LIMIT && streakKind === 'vowel') {
+  if (streakCount >= limit && streakKind === 'vowel') {
     chosen = drawFrom(BASE_LETTER_WEIGHTS.filter((i) => !VOWELS.has(i.letter)));
-  } else if (streakCount >= BALANCE_STREAK_LIMIT && streakKind === 'consonant') {
+  } else if (streakCount >= limit && streakKind === 'consonant') {
     chosen = drawFrom(BASE_LETTER_WEIGHTS.filter((i) => VOWELS.has(i.letter)));
   } else {
     chosen = drawFrom(BASE_LETTER_WEIGHTS);
