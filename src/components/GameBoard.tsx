@@ -437,7 +437,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             const baseStroke = '#94a3b8';
             const textColor = '#0f172a';
             const strokeW = isSelected ? '2.5' : '1.5';
-            const filterEffect = isSelected ? 'url(#selectGlow)' : 'url(#tileShadow)';
+            // Perf: SVG filters re-rasterize every frame while tiles move; only selected tiles get one.
+            const filterEffect = isSelected ? 'url(#selectGlow)' : undefined;
 
             const fill = isClearing
               ? 'url(#clearingGradient)'
@@ -464,10 +465,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     points={getHexPolygonPoints(tile.x, tile.y, tileRadius + 1.5 * scale)}
                     fill="none"
                     stroke="#c4b5fd"
-                    strokeWidth={4 * scale}
-                    opacity={0.85}
-                    style={{ filter: 'drop-shadow(0 0 6px rgba(196,181,253,0.95))' }}
+                    strokeWidth={5 * scale}
+                    strokeOpacity={0.55}
                     pointerEvents="none"
+                  />
+                )}
+                {!isSelected && !isClearing && (
+                  <polygon
+                    points={getHexPolygonPoints(tile.x, tile.y + 2.5 * scale, tileRadius - 0.5)}
+                    fill="#000000"
+                    opacity={0.35}
                   />
                 )}
                 <polygon
@@ -576,9 +583,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     points={getHexPolygonPoints(ft.x, ft.y, tileRadius + 1.5 * scale)}
                     fill="none"
                     stroke="#c4b5fd"
-                    strokeWidth={4 * scale}
-                    opacity={0.85}
-                    style={{ filter: 'drop-shadow(0 0 6px rgba(196,181,253,0.95))' }}
+                    strokeWidth={5 * scale}
+                    strokeOpacity={0.55}
                     pointerEvents="none"
                   />
                 )}

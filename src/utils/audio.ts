@@ -204,8 +204,13 @@ class SoundManager {
     }
   }
 
+  private lastTileDropAt = 0;
   public playTileDrop() {
     if (!this.enabled) return;
+    // Perf: many tiles can land in the same frame after a clear; play one thud per 70ms.
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - this.lastTileDropAt < 70) return;
+    this.lastTileDropAt = now;
     this.initCtx();
     if (!this.ctx) return;
 
