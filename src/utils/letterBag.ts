@@ -8,35 +8,35 @@ export interface LetterSpawnModifiers {
   rareLetterWeightMultiplier?: number; // e.g. 0.8
 }
 
-// Letter frequency table based on English usage with sensible floor
-// Rare letters (J, X, Q, Z) have a floor of 1.0% to keep gameplay fair and engaging
+// Letter frequencies: Cornell English letter frequency table (40,000-word sample)
+// https://pi.math.cornell.edu/~mec/2003-2004/cryptography/subs/frequencies.html
 const BASE_LETTER_WEIGHTS: Array<{ letter: string; weight: number }> = [
-  { letter: 'E', weight: 12.0 },
-  { letter: 'A', weight: 8.5 },
-  { letter: 'I', weight: 7.5 },
-  { letter: 'O', weight: 7.5 },
-  { letter: 'T', weight: 7.0 },
-  { letter: 'N', weight: 6.5 },
-  { letter: 'S', weight: 6.2 },
-  { letter: 'R', weight: 6.0 },
-  { letter: 'H', weight: 5.5 },
-  { letter: 'L', weight: 4.2 },
-  { letter: 'D', weight: 4.0 },
-  { letter: 'C', weight: 3.2 },
-  { letter: 'U', weight: 3.2 },
-  { letter: 'M', weight: 2.8 },
-  { letter: 'P', weight: 2.5 },
-  { letter: 'F', weight: 2.2 },
-  { letter: 'G', weight: 2.2 },
-  { letter: 'W', weight: 2.2 },
-  { letter: 'Y', weight: 2.0 },
-  { letter: 'B', weight: 1.8 },
-  { letter: 'V', weight: 1.4 },
-  { letter: 'K', weight: 1.2 },
-  { letter: 'J', weight: 1.0 },
-  { letter: 'X', weight: 1.0 },
-  { letter: 'Z', weight: 1.0 },
-  { letter: 'Q', weight: 1.0 },
+  { letter: 'E', weight: 12.02 },
+  { letter: 'T', weight: 9.1 },
+  { letter: 'A', weight: 8.12 },
+  { letter: 'O', weight: 7.68 },
+  { letter: 'I', weight: 7.31 },
+  { letter: 'N', weight: 6.95 },
+  { letter: 'S', weight: 6.28 },
+  { letter: 'R', weight: 6.02 },
+  { letter: 'H', weight: 5.92 },
+  { letter: 'D', weight: 4.32 },
+  { letter: 'L', weight: 3.98 },
+  { letter: 'U', weight: 2.88 },
+  { letter: 'C', weight: 2.71 },
+  { letter: 'M', weight: 2.61 },
+  { letter: 'F', weight: 2.3 },
+  { letter: 'Y', weight: 2.11 },
+  { letter: 'W', weight: 2.09 },
+  { letter: 'G', weight: 2.03 },
+  { letter: 'P', weight: 1.82 },
+  { letter: 'B', weight: 1.49 },
+  { letter: 'V', weight: 1.11 },
+  { letter: 'K', weight: 0.69 },
+  { letter: 'X', weight: 0.17 },
+  { letter: 'Q', weight: 0.11 },
+  { letter: 'J', weight: 0.1 },
+  { letter: 'Z', weight: 0.07 },
 ];
 
 const BASE_TOTAL_WEIGHT = BASE_LETTER_WEIGHTS.reduce((sum, item) => sum + item.weight, 0);
