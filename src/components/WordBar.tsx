@@ -69,7 +69,7 @@ export const WordBar: React.FC<WordBarProps> = ({
     }
   }, [lastFoundWord]);
 
-  // Dynamic scale calculation for long words, bounded at >= 0.6
+  // Dynamic scale calculation for long words, floored at 0.32, with horizontal scroll as backup
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -84,7 +84,9 @@ export const WordBar: React.FC<WordBarProps> = ({
       const contentWidth = contentRef.current.scrollWidth;
 
       if (containerWidth > 0 && contentWidth > 0 && contentWidth > containerWidth - 8) {
-        const targetScale = Math.max(0.6, (containerWidth - 8) / contentWidth);
+        // Floor was 0.6, which clipped 12–15 letter words on a phone. Allow
+        // tighter scale so long words stay visible; the tray can also scroll.
+        const targetScale = Math.max(0.32, (containerWidth - 8) / contentWidth);
         setScale(targetScale);
       } else {
         setScale(1);
@@ -102,7 +104,7 @@ export const WordBar: React.FC<WordBarProps> = ({
   const renderTiles = () => (
     <div
       ref={containerRef}
-      className="flex-1 min-w-0 h-full flex items-center justify-center overflow-hidden"
+      className="flex-1 min-w-0 h-full flex items-center justify-center overflow-x-auto overflow-y-hidden"
     >
       <div
         style={{
@@ -123,7 +125,13 @@ export const WordBar: React.FC<WordBarProps> = ({
               onClick={() => onRemoveTile(tile)}
               title="Tap to remove letter"
               aria-label={`Remove letter ${tile.letter.display}`}
-              className="relative min-w-[44px] sm:min-w-[48px] h-[48px] sm:h-[50px] px-2 rounded-xl bg-amber-400 text-amber-950 font-display font-black text-2xl border-2 border-amber-300 shadow-md flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer animate-letter-spring focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 shrink-0"
+              className={`relative px-2 rounded-xl bg-amber-400 text-amber-950 font-display font-black border-2 border-amber-300 shadow-md flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer animate-letter-spring focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 shrink-0 ${
+                letterCount >= 12
+                  ? 'min-w-[32px] sm:min-w-[36px] h-[40px] sm:h-[44px] text-xl'
+                  : letterCount >= 9
+                    ? 'min-w-[36px] sm:min-w-[40px] h-[44px] sm:h-[48px] text-xl sm:text-2xl'
+                    : 'min-w-[44px] sm:min-w-[48px] h-[48px] sm:h-[50px] text-2xl'
+              }`}
             >
               <span>{tile.letter.display}</span>
               {/* Always visible ✕ corner mark */}

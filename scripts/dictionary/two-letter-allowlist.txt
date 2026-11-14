@@ -1,0 +1,56 @@
+# Everyday 2-letter words kept in play, plus solfège syllables and OK.
+# Any other 2-letter token is rejected, including runtime splits such as AU from AU PAIR.
+AD
+AH
+AM
+AN
+AS
+AT
+AW
+AX
+AY
+BE
+BY
+DO
+EH
+EX
+GO
+HA
+HE
+HI
+HO
+ID
+IF
+IN
+IS
+IT
+MA
+ME
+MY
+NO
+OF
+OH
+ON
+OR
+OW
+OX
+OY
+PA
+SO
+TO
+UH
+UM
+UP
+US
+WE
+YE
+YO
+# solfège
+FA
+LA
+MI
+RE
+SI
+TI
+# everyday addition
+OK
