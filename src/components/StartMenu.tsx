@@ -146,7 +146,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
                   Quick Play
                 </span>
                 <span className="text-xs sm:text-sm font-extrabold text-slate-900/80 block mt-0.5">
-                  1-Minute Round · {activePreset.label} Mode
+                  2-Minute Round · {activePreset.label} Mode
                 </span>
               </div>
             </div>

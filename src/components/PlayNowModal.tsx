@@ -500,7 +500,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
 
                 {turnCondition === 'timer' ? (
                   <div className="grid grid-cols-4 gap-2">
-                    {[30, 45, 60, 90].map((sec) => (
+                    {[30, 60, 90, 120].map((sec) => (
                       <button
                         key={sec}
                         type="button"
@@ -511,7 +511,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                             : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
                         }`}
                       >
-                        {sec}s
+                        {sec >= 60 && sec % 60 === 0 ? `${sec / 60} min` : `${sec}s`}
                       </button>
                     ))}
                   </div>

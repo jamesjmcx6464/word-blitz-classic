@@ -82,7 +82,7 @@ export default function App() {
   const lastQuickPlayConfigRef = useRef<{
     difficulty: DifficultyLevel;
     timeLimit: number;
-  }>({ difficulty, timeLimit: 60 });
+  }>({ difficulty, timeLimit: 120 });
 
   // Screen Mode: 'pc' (about half width) vs 'phone' (fits screen) - automatically detected by device
   const [screenMode, setScreenMode] = useState<ScreenModeType>(() => detectDevice());
@@ -673,9 +673,9 @@ export default function App() {
     });
   };
 
-  // Quick Play: Immediate start with active Difficulty defaults (1 min timer, pace rises on word enter)
+  // Quick Play: Immediate start with active Difficulty defaults (2 min timer, pace rises on word enter)
   const handleQuickPlay = () => {
-    launchQuickPlayWithConfig(difficultyRef.current, 60);
+    launchQuickPlayWithConfig(difficultyRef.current, 120);
   };
 
   // Quick Play "Play Again": restart Quick Play with the exact same settings as the finished run

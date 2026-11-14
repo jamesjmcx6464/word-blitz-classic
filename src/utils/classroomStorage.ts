@@ -109,7 +109,7 @@ export const DEFAULT_CLASSROOM_CONFIG: ClassroomConfig = {
     createDefaultTeam(1, 'animals'),
   ],
   turnCondition: 'timer',
-  turnSeconds: 30,
+  turnSeconds: 120,
   turnWordsTarget: 2,
   totalRounds: 3,
   cleanBoardEachTurn: true,
