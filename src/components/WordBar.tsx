@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { HexTile, WordEntry } from '../types/game';
 import { getWordScore } from '../data/dictionary';
 import { getSpellingProgress } from '../utils/spellingProgress';
-import { Check, RotateCcw, Shuffle, Delete } from 'lucide-react';
+import { Check, RotateCcw, Delete } from 'lucide-react';
 
 interface WordBarProps {
   selectedTiles: HexTile[];
@@ -12,7 +12,6 @@ interface WordBarProps {
   isShaking: boolean;
   errorMessage: string | null;
   isWide?: boolean;
-  onShuffleSelection?: () => void;
   lastFoundWord?: WordEntry | null;
   isSpellingMode?: boolean;
   spellingWords?: string[];
@@ -35,7 +34,6 @@ export const WordBar: React.FC<WordBarProps> = ({
   isShaking,
   errorMessage,
   isWide = false,
-  onShuffleSelection,
   lastFoundWord = null,
   isSpellingMode = false,
   spellingWords = [],
@@ -248,35 +246,6 @@ export const WordBar: React.FC<WordBarProps> = ({
           </span>
         )}
       </button>
-
-      {/* 🔀 Mix button (Always rendered when onShuffleSelection provided, disabled when < 3) */}
-      {onShuffleSelection && (
-        <button
-          type="button"
-          onClick={onShuffleSelection}
-          disabled={selectedTiles.length < 3}
-          aria-label="Mix selected letters"
-          className={`h-[56px] px-3 rounded-2xl flex flex-col items-center justify-center font-bold text-sm border-2 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 shrink-0 ${
-            selectedTiles.length >= 3
-              ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 cursor-pointer shadow-sm active:scale-95'
-              : 'bg-slate-900/50 text-slate-600 border-slate-800/60 cursor-not-allowed'
-          }`}
-        >
-          <div className="flex items-center gap-1 whitespace-nowrap">
-            <Shuffle
-              className={`w-4 h-4 shrink-0 ${
-                selectedTiles.length >= 3 ? 'text-amber-400' : 'text-slate-600'
-              }`}
-            />
-            <span>Mix</span>
-          </div>
-          {isWide && (
-            <span className="text-[10px] text-slate-500 hidden sm:block whitespace-nowrap leading-none mt-0.5">
-              Shuffle
-            </span>
-          )}
-        </button>
-      )}
 
       {/* ✅ GO! Button (flex-[2], emerald, h-[56px]) */}
       <button

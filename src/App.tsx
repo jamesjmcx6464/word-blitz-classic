@@ -1000,21 +1000,6 @@ export default function App() {
     setErrorMessage(null);
   };
 
-  // Shuffle current selection
-  const handleShuffleSelection = () => {
-    if (selectedTiles.length >= 3) {
-      const shuffled = [...selectedTiles];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        const temp = shuffled[i];
-        shuffled[i] = shuffled[j];
-        shuffled[j] = temp;
-      }
-      setSelectedTiles(shuffled);
-      setErrorMessage(null);
-    }
-  };
-
   // Bump both fall speed and spawn rate whenever a word is entered (success or failure)
   const bumpPaceOnWordEnter = () => {
     if (
@@ -1579,7 +1564,6 @@ export default function App() {
             isShaking={isShaking}
             errorMessage={errorMessage}
             isWide={viewMode === 'wide'}
-            onShuffleSelection={handleShuffleSelection}
             lastFoundWord={wordHistory[wordHistory.length - 1] ?? null}
             isSpellingMode={
               classroomMatch?.config.useSpellingList ||
