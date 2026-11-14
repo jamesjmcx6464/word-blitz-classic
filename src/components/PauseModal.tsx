@@ -5,16 +5,11 @@ import {
   Home,
   Volume2,
   VolumeX,
-  Sliders,
   BookOpen,
-  Sparkles,
-  Users,
   SkipForward,
   Flag,
 } from 'lucide-react';
-import { ViewMode, FreePlaySettings, WordEntry, DEFAULT_FREE_PLAY_SETTINGS, ClassroomMatchState } from '../types/game';
-import { parseSpellingWords } from '../utils/spellingWords';
-import { GameOptionsPanel } from './GameOptionsPanel';
+import { ViewMode, FreePlaySettings, WordEntry, ClassroomMatchState } from '../types/game';
 
 interface PauseModalProps {
   onResume: () => void;
@@ -32,7 +27,7 @@ interface PauseModalProps {
   onFinishMatchEarly?: () => void;
 }
 
-type PauseTab = 'menu' | 'options' | 'words';
+type PauseTab = 'menu' | 'words';
 
 export const PauseModal: React.FC<PauseModalProps> = ({
   onResume,
@@ -41,8 +36,8 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   soundEnabled,
   onToggleSound,
   viewMode: _viewMode,
-  freePlaySettings = DEFAULT_FREE_PLAY_SETTINGS,
-  onUpdateFreePlaySettings,
+  freePlaySettings: _freePlaySettings,
+  onUpdateFreePlaySettings: _onUpdateFreePlaySettings,
   onResetFreePlaySettings: _onResetFreePlaySettings,
   wordEntries = [],
   classroomMatch,
@@ -50,16 +45,8 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onFinishMatchEarly,
 }) => {
   const [activeTab, setActiveTab] = useState<PauseTab>('menu');
-  const [localSettings, setLocalSettings] = useState<FreePlaySettings>(freePlaySettings);
   const [confirmingAction, setConfirmingAction] = useState<'restart' | 'quit' | null>(null);
 
-  const spellingWordsList = parseSpellingWords(localSettings.spellingWordsList);
-  const isSpellingMode = localSettings.spellingWordsEnabled;
-
-  const handleSettingsChange = (next: FreePlaySettings) => {
-    setLocalSettings(next);
-    onUpdateFreePlaySettings?.(next);
-  };
 
   const activeTeam = classroomMatch
     ? classroomMatch.config.teams[classroomMatch.currentTeamIndex]
@@ -75,8 +62,6 @@ export const PauseModal: React.FC<PauseModalProps> = ({
               <h2 className="text-2xl font-display font-black text-slate-900 leading-tight">
                 {activeTab === 'menu'
                   ? 'Paused'
-                  : activeTab === 'options'
-                  ? 'Game Options'
                   : 'My Words'}
               </h2>
               {activeTeam && (
@@ -105,22 +90,6 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Game</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('options');
-                setConfirmingAction(null);
-              }}
-              className={`flex-1 min-h-[48px] px-3 rounded-2xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeTab === 'options'
-                  ? 'bg-amber-400 text-amber-950 shadow-md font-black'
-                  : 'bg-white text-slate-700 border-2 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <Sliders className="w-4 h-4" />
-              <span>Options</span>
             </button>
 
             <button
@@ -256,46 +225,6 @@ export const PauseModal: React.FC<PauseModalProps> = ({
                 </button>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Tab 2: Options */}
-        {activeTab === 'options' && (
-          <div className="p-4 sm:p-5 flex-1 overflow-y-auto space-y-4 text-left">
-            {/* Read-only spelling words chip list in spelling mode */}
-            {isSpellingMode && spellingWordsList.length > 0 && (
-              <div className="p-4 rounded-2xl bg-teal-50 border-2 border-teal-300 space-y-2">
-                <div className="flex items-center gap-2 font-display font-black text-teal-950 text-base">
-                  <Sparkles className="w-5 h-5 text-teal-600" />
-                  <span>Word list ({spellingWordsList.length}):</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
-                  {spellingWordsList.map((word) => (
-                    <span
-                      key={word}
-                      className="px-2.5 py-1 rounded-xl bg-white border border-teal-300 text-teal-950 font-bold text-sm font-mono"
-                    >
-                      {word}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Game Options Panel (segmented controls, NO sliders) */}
-            <GameOptionsPanel
-              settings={localSettings}
-              onChange={handleSettingsChange}
-              showTimer={false}
-            />
-
-            <button
-              type="button"
-              onClick={onResume}
-              className="w-full min-h-[56px] rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-display font-black text-base shadow-md cursor-pointer transition-all mt-4"
-            >
-              Apply & Keep Playing
-            </button>
           </div>
         )}
 
