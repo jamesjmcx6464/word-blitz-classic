@@ -34,7 +34,7 @@ export const WordBar: React.FC<WordBarProps> = ({
 }) => {
   const wordString = selectedTiles.map((t) => t.letter.value).join('');
   const letterCount = wordString.length;
-  const potentialScore = letterCount >= 2 ? getWordScore(letterCount) : 0;
+  const potentialScore = letterCount >= 2 ? getWordScore(letterCount, wordString) : 0;
   const isValidLength = letterCount >= 2;
 
   // Track success messages

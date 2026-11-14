@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { HexTile, FloatingScore, ViewMode } from '../types/game';
+import { isRareLetterDisplay } from '../data/dictionary';
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -458,6 +459,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 key={tile.id}
               >
                 {/* Tile Base Polygon */}
+                {isRareLetterDisplay(tile.letter.display) && !isClearing && (
+                  <polygon
+                    points={getHexPolygonPoints(tile.x, tile.y, tileRadius + 1.5 * scale)}
+                    fill="none"
+                    stroke="#c4b5fd"
+                    strokeWidth={4 * scale}
+                    opacity={0.85}
+                    style={{ filter: 'drop-shadow(0 0 6px rgba(196,181,253,0.95))' }}
+                    pointerEvents="none"
+                  />
+                )}
                 <polygon
                   points={getHexPolygonPoints(tile.x, tile.y, tileRadius - 0.5)}
                   fill={fill}
@@ -559,6 +571,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 id={`hex-tile-${ft.id}`}
                 key={ft.id}
               >
+                {isRareLetterDisplay(ft.letter.display) && !isClearing && (
+                  <polygon
+                    points={getHexPolygonPoints(ft.x, ft.y, tileRadius + 1.5 * scale)}
+                    fill="none"
+                    stroke="#c4b5fd"
+                    strokeWidth={4 * scale}
+                    opacity={0.85}
+                    style={{ filter: 'drop-shadow(0 0 6px rgba(196,181,253,0.95))' }}
+                    pointerEvents="none"
+                  />
+                )}
                 <polygon
                   points={getHexPolygonPoints(ft.x, ft.y, tileRadius - 0.5)}
                   fill={fill}

@@ -29,7 +29,7 @@ import {
   computeScreenSpeedMultiplier,
 } from './utils/hexPhysics';
 import { drawRandomLetter, drawBalancedLetter, LetterTileInfo } from './utils/letterBag';
-import { isValidWord, getWordScore } from './data/dictionary';
+import { isValidWord, getWordScore, countRareLetters } from './data/dictionary';
 import { soundManager } from './utils/audio';
 import { saveHighScore, makeTimeBucketKey } from './utils/highScores';
 import { getSavedDifficulty, saveDifficulty, getDifficultyConfig } from './utils/difficulty';
@@ -1003,8 +1003,8 @@ export default function App() {
 
     // VALID WORD!
     bumpPaceOnWordEnter();
-    const pointsAwarded = getWordScore(wordString.length);
-    const popupText = `+${pointsAwarded}`;
+    const pointsAwarded = getWordScore(wordString.length, wordString);
+    const popupText = countRareLetters(wordString) > 0 ? `+${pointsAwarded} rare!` : `+${pointsAwarded}`;
 
     // Record in wordHistory
     const newWordEntry: WordEntry = {

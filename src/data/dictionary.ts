@@ -52,8 +52,25 @@ export function isValidWord(word: string): boolean {
   return wordSet.has(normalized);
 }
 
-export function getWordScore(length: number): number {
+export const RARE_LETTERS = new Set(['K', 'X', 'Q', 'J', 'Z']);
+export const RARE_LETTER_MULTIPLIER = 1.5;
+
+export function countRareLetters(word: string): number {
+  let n = 0;
+  for (const ch of word.toUpperCase()) if (RARE_LETTERS.has(ch)) n += 1;
+  return n;
+}
+
+export function isRareLetterDisplay(display: string): boolean {
+  return countRareLetters(display) > 0;
+}
+
+export function getWordScore(length: number, word?: string): number {
   if (length < 2) return 0;
+  if (word) {
+    const rare = countRareLetters(word);
+    if (rare > 0) return Math.round(Math.pow(2, length) * Math.pow(RARE_LETTER_MULTIPLIER, rare));
+  }
   // 2^length. Safe (exact) in JS for every real English word (2^53 is the
   // integer limit; the longest dictionary word is far shorter). A 15-letter
   // word is worth 32,768 points, which will dominate a short timed round.
