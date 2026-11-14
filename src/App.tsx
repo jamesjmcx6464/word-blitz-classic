@@ -568,7 +568,7 @@ export default function App() {
       return;
     }
 
-    const letter: LetterTileInfo = drawRandomLetter(configFor(difficultyRef.current).letterMods);
+    const letter: LetterTileInfo = drawRandomLetter();
 
     const newTile: HexTile = {
       id: `tile_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${Math.floor(performance.now() * 100)}`,

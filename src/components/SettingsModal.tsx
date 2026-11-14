@@ -141,13 +141,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ saved, onSave, onR
             value={draft.wallWidthPct}
             onChange={(v) => set('wallWidthPct', v)}
           />
-          <Segmented
-            label="Letter mix"
-            hint="Friendly = more vowels, fewer Q Z X J"
-            options={CUSTOM_OPTIONS.letterMix}
-            value={draft.letterMix}
-            onChange={(v) => set('letterMix', v)}
-          />
           <p className="text-[11px] text-slate-500 font-medium">
             Round times are set per mode (Quick Play, Solo, Team), not here.
           </p>
