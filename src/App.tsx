@@ -705,9 +705,7 @@ export default function App() {
 
     setScreen('PLAYING');
 
-    setTimeout(() => {
-      spawnNextHexagon();
-    }, 300);
+    spawnTimerRef.current = 0; // loop spawns the first tile
   };
 
   // Start Quick Play using a specific DifficultyLevel & timeLimit
@@ -862,9 +860,7 @@ export default function App() {
 
     setScreen('PLAYING');
 
-    setTimeout(() => {
-      spawnNextHexagon();
-    }, 350);
+    spawnTimerRef.current = 0; // loop spawns the first tile
   };
 
   // Classroom: Rematch with same teams
@@ -1324,22 +1320,27 @@ export default function App() {
         setFrozenTiles([...frozenTilesRef.current]);
       }
 
-      // 3. Continuous spawn cadence (accelerates dynamically as spawnIntervalRef decreases)
+      // 3. Rain-like spawn cadence. No hard cap: the interval is derived so that,
+      // on average, TARGET_ON_SCREEN tiles are falling at once (phone baseline,
+      // scaled up for wider boards). Word-enter acceleration shortens it further.
       const preset = DIFFICULTY_PRESETS[difficultyRef.current];
-      const isWideBoard = boardWidthRef.current > 850;
-      const baseInterval = spawnIntervalRef.current || preset.spawnIntervalMs;
-      const SPAWN_INTERVAL_MS = Math.max(
-        preset.minSpawnIntervalMs,
-        isWideBoard ? Math.round(baseInterval * 0.85) : baseInterval
-      );
-      const baseMaxInFlight = boardWidthRef.current > 1200 ? 5 : isWideBoard ? 4 : 3;
-      const MAX_IN_FLIGHT = Math.max(2, baseMaxInFlight + preset.maxInFlightOffset);
+      const PHONE_TARGET: Record<string, number> = { beginner: 2, easy: 2.5, normal: 3, hard: 4, nightmare: 5 };
+      const width = boardWidthRef.current;
+      const widthScale = width > 1200 ? 5 / 3 : width > 850 ? 4 / 3 : 1;
+      const targetOnScreen = (PHONE_TARGET[difficultyRef.current] ?? 3) * widthScale;
+      const fallTimeMs = ((effectiveGroundY - SPAWN_Y) / Math.max(1, activeFallSpeed)) * 1000;
+      const accelRatio = (spawnIntervalRef.current || preset.spawnIntervalMs) / preset.spawnIntervalMs;
+      const meanInterval = Math.max(150, (fallTimeMs / targetOnScreen) * accelRatio);
+      const SAFETY_MAX = 12;
       const activeFallingCount = fallingTilesRef.current.filter((t) => !t.isClearing).length;
-      if (activeFallingCount < MAX_IN_FLIGHT) {
-        if (currentTime >= spawnTimerRef.current) {
-          spawnTimerRef.current = currentTime + SPAWN_INTERVAL_MS;
-          spawnNextHexagon();
-        }
+      if (spawnTimerRef.current === 0) {
+        // First spawn of a round: one tile now, next after a jittered gap
+        spawnTimerRef.current = currentTime;
+      }
+      if (activeFallingCount < SAFETY_MAX && currentTime >= spawnTimerRef.current) {
+        const jitter = 0.6 + Math.random() * 0.8; // 0.6x to 1.4x
+        spawnTimerRef.current = currentTime + meanInterval * jitter;
+        spawnNextHexagon();
       }
 
       animFrameId.current = requestAnimationFrame(loop);
