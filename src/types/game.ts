@@ -59,6 +59,7 @@ export interface FreePlaySettings {
   ceilingHeight: number; // ceiling danger line Y coordinate (default 85, range 40 - 220)
   spellingWordsEnabled: boolean; // whether spelling words mode is active
   spellingWordsList: string; // text list of words entered by player/teacher/parent
+  wordListName: string; // display name of the active word list (leaderboard section label)
 }
 
 export type DifficultyLevel = 'beginner' | 'easy' | 'normal' | 'hard' | 'nightmare';
@@ -164,6 +165,7 @@ export const DEFAULT_FREE_PLAY_SETTINGS: FreePlaySettings = {
   ceilingHeight: 60,
   spellingWordsEnabled: false,
   spellingWordsList: 'CAT, DOG, BIRD, FISH, TREE, BOOK, STAR, PLAY',
+  wordListName: 'My list',
 };
 
 // Classroom / Team Mode Types

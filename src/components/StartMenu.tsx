@@ -11,7 +11,11 @@ import {
   ArrowRight,
   HelpCircle,
   X,
+  BookOpen,
+  Edit3,
 } from 'lucide-react';
+import { READY_MADE_LISTS } from '../data/readyMadeLists';
+import { loadSavedLists } from '../utils/savedSpellingLists';
 import { ScreenModeType, DifficultyLevel, DIFFICULTY_PRESETS } from '../types/game';
 import { Gauge, Flame } from 'lucide-react';
 
@@ -25,6 +29,12 @@ interface StartMenuProps {
   screenMode: ScreenModeType;
   difficulty: DifficultyLevel;
   onChangeDifficulty: (level: DifficultyLevel) => void;
+  wordListEnabled: boolean;
+  wordListName: string;
+  wordListCount: number;
+  /** Pick the active word list: null = All words, 'current' = keep current list, or a list to load */
+  onSelectWordList: (choice: null | 'current' | { name: string; words: string }) => void;
+  onOpenWordListEditor: () => void;
 }
 
 const DIFFICULTY_ORDER: DifficultyLevel[] = ['beginner', 'easy', 'normal', 'hard', 'nightmare'];
@@ -65,8 +75,35 @@ export const StartMenu: React.FC<StartMenuProps> = ({
   screenMode,
   difficulty,
   onChangeDifficulty,
+  wordListEnabled,
+  wordListName,
+  wordListCount,
+  onSelectWordList,
+  onOpenWordListEditor,
 }) => {
   const isWide = screenMode === 'pc';
+  const listActive = wordListEnabled && wordListCount > 0;
+  const currentNameKey = (wordListName || '').trim().toLowerCase();
+  const savedLists = loadSavedLists().filter(
+    (l) => l.name.trim().toLowerCase() !== currentNameKey
+  );
+  const readyLists = READY_MADE_LISTS.map((l, idx) => ({ ...l, idx })).filter(
+    (l) => l.name.trim().toLowerCase() !== currentNameKey
+  );
+  const selectValue = listActive ? 'current' : 'all';
+  const handleSelectChange = (val: string) => {
+    if (val === 'all') return onSelectWordList(null);
+    if (val === 'current') return onSelectWordList('current');
+    if (val.startsWith('saved:')) {
+      const item = savedLists.find((l) => l.id === val.slice(6));
+      if (item) onSelectWordList({ name: item.name, words: item.words });
+      return;
+    }
+    if (val.startsWith('ready:')) {
+      const item = READY_MADE_LISTS[Number(val.slice(6))];
+      if (item) onSelectWordList({ name: item.name, words: item.words });
+    }
+  };
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const activePreset = DIFFICULTY_PRESETS[difficulty];
 
@@ -130,33 +167,6 @@ export const StartMenu: React.FC<StartMenuProps> = ({
 
       {/* Main Section */}
       <main className="flex-1 flex flex-col items-center justify-center py-3 sm:py-4 space-y-3">
-        {/* 1. Leaderboard Button (Above Quick Play) */}
-        <div className="w-full">
-          <button
-            type="button"
-            onClick={onOpenHighScores}
-            className="w-full min-h-[52px] sm:min-h-[56px] px-4 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 border-2 border-amber-400/40 hover:border-amber-400 text-amber-200 flex items-center justify-between shadow-lg shadow-amber-500/10 transition-all cursor-pointer active:scale-[0.99] group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-300 group-hover:scale-105 transition-transform">
-                <Trophy className="w-5 h-5 text-amber-400" />
-              </div>
-              <div className="text-left">
-                <span className="font-display font-black text-base sm:text-lg text-white block leading-tight">
-                  Leaderboard
-                </span>
-                <span className="text-xs text-amber-400/80 font-semibold block leading-none">
-                  Classroom Scores & High Records
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-400/30">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>View Ranks</span>
-            </div>
-          </button>
-        </div>
-
         {/* 2. Quick Play Button */}
         <div className="w-full">
           <button
@@ -173,7 +183,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
                   Quick Play
                 </span>
                 <span className="text-xs sm:text-sm font-extrabold text-slate-900/80 block mt-0.5">
-                  1-Minute Round · {activePreset.label} Mode
+                  1-Minute Round · {activePreset.label} · {listActive ? wordListName : 'All words'}
                 </span>
               </div>
             </div>
@@ -228,6 +238,58 @@ export const StartMenu: React.FC<StartMenuProps> = ({
               </span>
             </div>
           </button>
+        </div>
+
+        {/* Word List selector (applies to Quick Play, Solo and Team) */}
+        <div className="w-full bg-slate-900/90 border border-teal-500/30 rounded-2xl p-3 sm:p-3.5 shadow-sm space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <BookOpen className="w-4 h-4 text-teal-400" />
+              <span className="text-[11px] font-display font-black uppercase tracking-widest text-slate-300">
+                Word list
+              </span>
+            </div>
+            <span className="text-xs font-bold text-teal-300 truncate">
+              {listActive ? `${wordListCount} ${wordListCount === 1 ? 'word' : 'words'} · own leaderboard` : 'Full dictionary'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              aria-label="Word list"
+              value={selectValue}
+              onChange={(e) => handleSelectChange(e.target.value)}
+              className="flex-1 min-w-0 min-h-[44px] px-3 rounded-xl bg-slate-800 border-2 border-slate-700 focus:border-teal-400 text-white font-bold text-sm cursor-pointer focus:outline-none"
+            >
+              <option value="all">All words</option>
+              {wordListCount > 0 && (
+                <option value="current">{wordListName || 'My list'} ({wordListCount})</option>
+              )}
+              {savedLists.length > 0 && (
+                <optgroup label="My saved lists">
+                  {savedLists.map((l) => (
+                    <option key={l.id} value={`saved:${l.id}`}>
+                      {l.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="Ready-made lists">
+                {readyLists.map((l) => (
+                  <option key={l.name} value={`ready:${l.idx}`}>
+                    {l.name}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+            <button
+              type="button"
+              onClick={onOpenWordListEditor}
+              className="min-h-[44px] px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border-2 border-teal-400/50 text-teal-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Edit lists</span>
+            </button>
+          </div>
         </div>
 
         {/* 4. Difficulty Menu (Easy, Normal, Hard, Nightmare) */}

@@ -1,12 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  ArrowLeft,
-  Play,
   Trash2,
   RotateCcw,
   Info,
-  ChevronDown,
-  ChevronUp,
   Bookmark,
   Sparkles,
   X,
@@ -23,67 +19,30 @@ import {
   setUiPrefs,
   SavedSpellingList,
 } from '../utils/savedSpellingLists';
-import { GameOptionsPanel } from './GameOptionsPanel';
+import { READY_MADE_LISTS } from '../data/readyMadeLists';
 
 interface SpellingListSetupProps {
   settings: FreePlaySettings;
   onUpdateSettings: (next: FreePlaySettings) => void;
-  onStart: () => void;
   onClose: () => void;
   isWide: boolean;
 }
 
-const READY_MADE_LISTS = [
-  {
-    name: '1st-2nd Grade',
-    words: 'CAT, DOG, BIRD, FISH, TREE, BOOK, STAR, PLAY, MOON, SUN',
-  },
-  {
-    name: '3rd-4th Grade',
-    words: 'FRIEND, SCHOOL, PLANET, BRIDGE, FOREST, CASTLE, GARDEN, SILVER',
-  },
-  {
-    name: '5th-6th Grade',
-    words: 'CHALLENGE, DISCOVER, ADVENTURE, ELEPHANT, JOURNEY, MYSTERY, VICTORY',
-  },
-  {
-    name: 'Animals',
-    words: 'ZEBRA, TIGER, MONKEY, PENGUIN, DOLPHIN, RABBIT, PANDA, GIRAFFE',
-  },
-  {
-    name: 'Sight Words',
-    words: 'THE, AND, WAS, FOR, ARE, BUT, SAID, HAVE, THEY, WHAT',
-  },
-  {
-    name: 'Weather',
-    words: 'RAIN, SNOW, WIND, CLOUD, STORM, SUNNY, FOGGY, THUNDER',
-  },
-  {
-    name: 'Space',
-    words: 'MOON, STAR, PLANET, ROCKET, COMET, EARTH, SOLAR, ORBIT',
-  },
-  {
-    name: 'Food',
-    words: 'APPLE, BREAD, PIZZA, CHEESE, BANANA, COOKIE, SALAD, PASTA',
-  },
-];
 
 export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
   settings,
   onUpdateSettings,
-  onStart,
   onClose,
   isWide,
 }) => {
   const [rawText, setRawText] = useState<string>(settings.spellingWordsList || '');
   const [savedLists, setSavedLists] = useState<SavedSpellingList[]>(() => loadSavedLists());
   const [uiPrefsState, setUiPrefsState] = useState(() => getUiPrefs());
-  const [listNameInput, setListNameInput] = useState<string>(() => {
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    return `Week of ${today}`;
-  });
+  const [listNameInput, setListNameInputState] = useState<string>(
+    () => settings.wordListName || 'My list'
+  );
   const [activePresetIndex, setActivePresetIndex] = useState<number | null>(null);
-  const [showMoreOptions, setShowMoreOptions] = useState<boolean>(false);
+  const [savedFlash, setSavedFlash] = useState<boolean>(false);
 
   // Undo Toast state
   const [undoToast, setUndoToast] = useState<{
@@ -96,13 +55,25 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
   const validWordCount = analysis.words.length;
 
   // Auto-sync settings on text or setting change
-  const syncSettings = (updatedText: string, updatedSettings?: Partial<FreePlaySettings>) => {
+  // Word list only: words + list name. Gameplay settings (timer, difficulty) live elsewhere.
+  const syncSettings = (updatedText: string, updatedName?: string) => {
     setRawText(updatedText);
+    const name = (updatedName ?? listNameInput).trim() || 'My list';
+    if (updatedName !== undefined) setListNameInputState(updatedName);
     onUpdateSettings({
       ...settings,
-      ...(updatedSettings || {}),
       spellingWordsList: updatedText,
+      wordListName: name,
       spellingWordsEnabled: true,
+    });
+  };
+
+  const setListNameInput = (name: string) => {
+    setListNameInputState(name);
+    onUpdateSettings({
+      ...settings,
+      spellingWordsList: rawText,
+      wordListName: name.trim() || 'My list',
     });
   };
 
@@ -110,8 +81,8 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
   useEffect(() => {
     if (!undoToast) return;
     const timer = setTimeout(() => {
-      setUndoToast(null), 8000;
-    });
+      setUndoToast(null);
+    }, 8000);
     return () => clearTimeout(timer);
   }, [undoToast]);
 
@@ -139,6 +110,8 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
     if (!rawText.trim()) return;
     const updated = saveList(listNameInput, rawText);
     setSavedLists(updated);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 1500);
   };
 
   const handleDeleteSavedList = (list: SavedSpellingList, e: React.MouseEvent) => {
@@ -158,9 +131,9 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
     }
   };
 
-  const handleApplyPresetWords = (presetWords: string, mode: 'add' | 'replace') => {
+  const handleApplyPresetWords = (presetWords: string, mode: 'add' | 'replace', presetName?: string) => {
     if (mode === 'replace' || !rawText.trim()) {
-      syncSettings(presetWords);
+      syncSettings(presetWords, presetName);
     } else {
       const combined = `${rawText.trim()}\n${presetWords}`;
       syncSettings(combined);
@@ -178,24 +151,15 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
     <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4 select-none">
       <div
         className={`w-full ${
-          isWide ? 'max-w-4xl max-h-[94vh]' : 'min-h-full sm:min-h-0 sm:max-h-[94vh]'
+          isWide ? 'max-w-4xl max-h-[94vh]' : 'h-full max-h-full sm:h-auto sm:max-h-[94vh]'
         } bg-gradient-to-b from-sky-50 via-amber-50 to-amber-100 sm:rounded-3xl border-0 sm:border-4 border-amber-300 shadow-2xl flex flex-col text-slate-800 overflow-hidden`}
       >
         {/* Sticky Header */}
         <div className="p-4 sm:p-5 bg-white/90 backdrop-blur-md border-b-2 border-amber-200 flex items-center justify-between gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-[56px] px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 font-display font-black text-base flex items-center gap-2 cursor-pointer transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-700" />
-            <span>Back</span>
-          </button>
-
-          <div className="text-center">
+          <div className="text-left">
             <h1 className="text-xl sm:text-2xl font-display font-black text-slate-900 tracking-tight flex items-center justify-center gap-2">
               <Sparkles className="w-6 h-6 text-amber-500 fill-amber-400" />
-              <span>Word List</span>
+              <span>Word Lists</span>
             </h1>
           </div>
 
@@ -336,7 +300,7 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleApplyPresetWords(preset.words, 'replace')}
+                            onClick={() => handleApplyPresetWords(preset.words, 'replace', preset.name)}
                             className="flex-1 min-h-[48px] px-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-sm transition-all cursor-pointer"
                           >
                             Replace my list
@@ -362,140 +326,13 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
                     ) : (
                       <button
                         type="button"
-                        onClick={() => handleApplyPresetWords(preset.words, 'replace')}
+                        onClick={() => handleApplyPresetWords(preset.words, 'replace', preset.name)}
                         className="mt-3 min-h-[48px] w-full px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-sm transition-all cursor-pointer"
                       >
                         Load words
                       </button>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* SECTION 4: How Hard (3 difficulty presets only) */}
-          <div className="bg-white rounded-3xl p-4 sm:p-5 border-4 border-slate-200 shadow-sm space-y-3">
-            <h2 className="text-lg font-display font-black text-slate-900">
-              How tricky?
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {[
-                {
-                  id: 'relaxed' as const,
-                  label: '🎈 Relaxed',
-                  desc: 'Slow letters, big tiles, lots of room',
-                  active:
-                    settings.dropSpeed === 170 &&
-                    settings.tileRadius === 34 &&
-                    settings.ceilingHeight === 50 &&
-                    settings.wallWidthPct === 100 &&
-                    !settings.speedIncreaseEnabled,
-                  color: 'emerald',
-                },
-                {
-                  id: 'just_right' as const,
-                  label: '⭐ Just right',
-                  desc: 'The normal, friendly game',
-                  active:
-                    settings.dropSpeed === 260 &&
-                    settings.tileRadius === 28 &&
-                    settings.ceilingHeight === 85 &&
-                    settings.wallWidthPct === 100 &&
-                    !settings.speedIncreaseEnabled,
-                  color: 'amber',
-                },
-                {
-                  id: 'challenge' as const,
-                  label: '⚡ Challenge',
-                  desc: 'Faster letters that speed up',
-                  active:
-                    settings.dropSpeed === 340 &&
-                    settings.tileRadius === 28 &&
-                    settings.ceilingHeight === 120 &&
-                    settings.wallWidthPct === 100 &&
-                    settings.speedIncreaseEnabled,
-                  color: 'rose',
-                },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    if (item.id === 'relaxed') {
-                      onUpdateSettings({
-                        ...settings,
-                        dropSpeed: 170,
-                        tileRadius: 34,
-                        ceilingHeight: 50,
-                        wallWidthPct: 100,
-                        speedIncreaseEnabled: false,
-                      });
-                    } else if (item.id === 'just_right') {
-                      onUpdateSettings({
-                        ...settings,
-                        dropSpeed: 260,
-                        tileRadius: 28,
-                        ceilingHeight: 85,
-                        wallWidthPct: 100,
-                        speedIncreaseEnabled: false,
-                      });
-                    } else {
-                      onUpdateSettings({
-                        ...settings,
-                        dropSpeed: 340,
-                        tileRadius: 28,
-                        ceilingHeight: 120,
-                        wallWidthPct: 100,
-                        speedIncreaseEnabled: true,
-                        speedIncreaseRate: 10,
-                      });
-                    }
-                  }}
-                  className={`min-h-[56px] p-3 rounded-2xl border-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 ${
-                    item.active
-                      ? 'bg-amber-100 border-amber-500 shadow-md ring-2 ring-amber-300'
-                      : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <span className="text-base font-display font-black text-slate-900">
-                    {item.label}
-                  </span>
-                  <span className="text-sm text-slate-600 font-medium leading-tight mt-0.5">
-                    {item.desc}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* SECTION 5: How Long? */}
-          <div className="bg-white rounded-3xl p-4 sm:p-5 border-4 border-slate-200 shadow-sm space-y-3">
-            <h2 className="text-lg font-display font-black text-slate-900">
-              How long?
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { label: 'No timer', sec: 0 },
-                { label: '2 min', sec: 120 },
-                { label: '5 min', sec: 300 },
-                { label: '10 min', sec: 600 },
-              ].map((item) => {
-                const active = settings.timeLimit === item.sec;
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => onUpdateSettings({ ...settings, timeLimit: item.sec })}
-                    className={`min-h-[56px] px-3 py-2 rounded-2xl border-4 font-bold text-base flex items-center justify-center gap-1.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 ${
-                      active
-                        ? 'bg-amber-400 border-amber-500 text-amber-950 shadow-md'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    {active && <Check className="w-4 h-4 text-amber-950 stroke-[3]" />}
-                    <span>{item.label}</span>
-                  </button>
                 );
               })}
             </div>
@@ -530,8 +367,11 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
           {/* SECTION 7: Save this list & Saved lists */}
           <div className="bg-white rounded-3xl p-4 sm:p-5 border-4 border-slate-200 shadow-sm space-y-4">
             <h2 className="text-lg font-display font-black text-slate-900">
-              Save this list
+              List name &amp; save
             </h2>
+            <p className="text-sm text-slate-600 -mt-2">
+              Scores with this list get their own leaderboard section under this name.
+            </p>
             <div className="flex flex-col sm:flex-row items-center gap-2">
               <input
                 type="text"
@@ -550,8 +390,8 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
-                <Bookmark className="w-5 h-5" />
-                <span>Save List</span>
+                {savedFlash ? <Check className="w-5 h-5 stroke-[3]" /> : <Bookmark className="w-5 h-5" />}
+                <span>{savedFlash ? 'Saved' : 'Save List'}</span>
               </button>
             </div>
 
@@ -566,8 +406,7 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
                     <div
                       key={item.id}
                       onClick={() => {
-                        syncSettings(item.words);
-                        setListNameInput(item.name);
+                        syncSettings(item.words, item.name);
                       }}
                       className="group inline-flex items-center gap-2 pl-3.5 pr-1 py-1 rounded-2xl bg-amber-50 hover:bg-amber-100 border-2 border-amber-300 text-amber-950 text-sm font-bold cursor-pointer transition-all shadow-sm"
                     >
@@ -590,32 +429,6 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
             )}
           </div>
 
-          {/* SECTION 8: More Options Accordion */}
-          <div className="bg-white rounded-3xl border-4 border-slate-200 shadow-sm overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowMoreOptions(!showMoreOptions)}
-              className="w-full min-h-[56px] px-5 py-3 flex items-center justify-between text-left font-display font-extrabold text-base text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400"
-            >
-              <span>More options</span>
-              {showMoreOptions ? (
-                <ChevronUp className="w-5 h-5 text-slate-600" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-slate-600" />
-              )}
-            </button>
-
-            {showMoreOptions && (
-              <div className="p-4 sm:p-5 border-t-2 border-slate-200">
-                <GameOptionsPanel
-                  settings={settings}
-                  onChange={(next) => onUpdateSettings(next)}
-                  compact={true}
-                  showTimer={true}
-                />
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Undo Toast */}
@@ -632,31 +445,6 @@ export const SpellingListSetup: React.FC<SpellingListSetupProps> = ({
           </div>
         )}
 
-        {/* Sticky Footer */}
-        <div className="p-4 sm:p-5 bg-white/90 backdrop-blur-md border-t-2 border-amber-200 flex items-center justify-between gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-[64px] px-6 rounded-2xl bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 font-display font-black text-base text-slate-800 flex items-center gap-2 cursor-pointer transition-all active:scale-95"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-700" />
-            <span>Return</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={validWordCount === 0}
-            onClick={onClose}
-            className={`flex-1 sm:flex-initial min-h-[64px] px-8 rounded-2xl font-display font-black text-lg flex items-center justify-center gap-2.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ${
-              validWordCount > 0
-                ? 'bg-emerald-500 hover:bg-emerald-400 text-emerald-950 shadow-xl shadow-emerald-500/30 active:scale-95 cursor-pointer'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            }`}
-          >
-            <Check className="w-5 h-5 stroke-[3]" />
-            <span>Done &amp; Return</span>
-          </button>
-        </div>
       </div>
     </div>
   );

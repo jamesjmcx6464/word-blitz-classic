@@ -26,11 +26,10 @@ interface SoloPlayerSetupModalProps {
   onStartSolo: (
     playerName: string,
     playerLogo: string,
-    useWordList: boolean,
     roundSeconds: number
   ) => void;
-  onOpenWordListSetup: () => void;
-  wordListCount: number;
+  /** Active word list label chosen on the start screen (e.g. "All words" or a list name) */
+  activeWordListLabel: string;
   isWide: boolean;
 }
 
@@ -38,8 +37,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
   isOpen,
   onClose,
   onStartSolo,
-  onOpenWordListSetup,
-  wordListCount,
+  activeWordListLabel,
   isWide,
 }) => {
   const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>([]);
@@ -51,7 +49,6 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<
     'all' | 'animals' | 'space' | 'sports' | 'gems'
   >('all');
-  const [useWordList, setUseWordList] = useState<boolean>(false);
   const [roundSeconds, setRoundSeconds] = useState<number>(60);
 
   // Carousel mouse-drag scroll state
@@ -158,7 +155,6 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
     onStartSolo(
       registered.name,
       registered.logo,
-      useWordList && wordListCount > 0,
       roundSeconds
     );
   };
@@ -441,56 +437,17 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
             </>
           )}
 
-          {/* 3. Word Selection & Round Timer */}
+          {/* 3. Word List (read-only) & Round Timer */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
-            {/* Word Selection */}
+            {/* Word list (chosen on the start screen) */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="font-display font-black text-xs uppercase tracking-wider text-slate-400 block">
-                  Words
-                </label>
-                <button
-                  type="button"
-                  onClick={onOpenWordListSetup}
-                  className="text-xs font-bold text-teal-400 hover:text-teal-300 underline cursor-pointer"
-                >
-                  Edit List
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setUseWordList(false)}
-                  className={`py-2 px-2.5 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
-                    !useWordList
-                      ? 'bg-amber-400 text-slate-950 border-amber-300'
-                      : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                  }`}
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span>All Words</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (wordListCount === 0) {
-                      onOpenWordListSetup();
-                    } else {
-                      setUseWordList(true);
-                    }
-                  }}
-                  className={`py-2 px-2.5 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
-                    useWordList
-                      ? 'bg-teal-500 text-slate-950 border-teal-300'
-                      : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                  }`}
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>
-                    Word List {wordListCount > 0 ? `(${wordListCount})` : ''}
-                  </span>
-                </button>
+              <label className="font-display font-black text-xs uppercase tracking-wider text-slate-400 block">
+                Words
+              </label>
+              <div className="py-2 px-2.5 rounded-xl border-2 border-slate-700 bg-slate-800 font-bold text-xs flex items-center gap-1.5 text-slate-200">
+                <BookOpen className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                <span className="truncate">{activeWordListLabel}</span>
+                <span className="ml-auto text-[10px] text-slate-500 shrink-0">set on Home</span>
               </div>
             </div>
 

@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   getHighScores,
   clearHighScores,
+  clearHighScoreSection,
+  wordListSectionKey,
+  ALL_WORDS_SECTION,
   formatTimeBucketLabel,
   sortTimeBuckets,
   HighScoreEntry,
@@ -18,6 +21,7 @@ import {
   User,
   Users,
   Clock,
+  BookOpen,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -25,6 +29,7 @@ export interface LastSoloResult {
   entryId?: string;
   mode?: LeaderboardMode;
   timeBucket?: string;
+  wordList?: string;
   playerName: string;
   playerLogo: string;
   score: number;
@@ -72,7 +77,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
   lastResult = null,
 }) => {
   const [scores, setScores] = useState<HighScoreEntry[]>(() => getHighScores());
-  const [showConfirmClear, setShowConfirmClear] = useState(false);
+  const [confirmClear, setConfirmClear] = useState<'none' | 'section' | 'all'>('none');
 
   const availableModes = useMemo(() => {
     const present = new Set<LeaderboardMode>(scores.map((s) => s.mode));
@@ -86,11 +91,36 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
     return availableModes[0] || 'quick';
   });
 
+  // Word list sections within the active mode ("All words" first, then lists A-Z)
+  const availableSections = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (const s of scores) {
+      if (s.mode !== activeMode) continue;
+      const key = wordListSectionKey(s.wordList);
+      if (!labels.has(key)) labels.set(key, s.wordList || 'All words');
+    }
+    const keys = Array.from(labels.keys()).sort((a, b) => {
+      if (a === ALL_WORDS_SECTION) return -1;
+      if (b === ALL_WORDS_SECTION) return 1;
+      return (labels.get(a) || '').localeCompare(labels.get(b) || '');
+    });
+    return keys.map((key) => ({ key, label: labels.get(key) || 'All words' }));
+  }, [scores, activeMode]);
+
+  const [activeSection, setActiveSection] = useState<string>(() =>
+    wordListSectionKey(lastResult?.wordList)
+  );
+
+  const activeSectionLabel =
+    availableSections.find((sec) => sec.key === activeSection)?.label || 'All words';
+
   const availableTimeBuckets = useMemo(() => {
-    const modeScores = scores.filter((s) => s.mode === activeMode);
+    const modeScores = scores.filter(
+      (s) => s.mode === activeMode && wordListSectionKey(s.wordList) === activeSection
+    );
     const unique = Array.from(new Set<string>(modeScores.map((s) => s.timeBucket)));
     return sortTimeBuckets(unique);
-  }, [scores, activeMode]);
+  }, [scores, activeMode, activeSection]);
 
   const [activeTimeBucket, setActiveTimeBucket] = useState<string>(() => {
     if (lastResult?.timeBucket && availableTimeBuckets.includes(lastResult.timeBucket)) {
@@ -111,9 +141,16 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
         : presentModes[0] || 'quick';
     setActiveMode(nextMode);
 
+    const nextSection = wordListSectionKey(lastResult?.wordList);
+    setActiveSection(nextSection);
+
     const buckets = sortTimeBuckets(
       Array.from(
-        new Set<string>(fresh.filter((s) => s.mode === nextMode).map((s) => s.timeBucket))
+        new Set<string>(
+          fresh
+            .filter((s) => s.mode === nextMode && wordListSectionKey(s.wordList) === nextSection)
+            .map((s) => s.timeBucket)
+        )
       )
     );
     const nextBucket =
@@ -138,6 +175,13 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
     }
   }, [availableModes, activeMode]);
 
+  // Keep activeSection valid when mode or scores change
+  useEffect(() => {
+    if (availableSections.length > 0 && !availableSections.some((sec) => sec.key === activeSection)) {
+      setActiveSection(availableSections[0].key);
+    }
+  }, [availableSections, activeSection]);
+
   // Keep activeTimeBucket valid when activeMode or availableTimeBuckets change
   useEffect(() => {
     if (availableTimeBuckets.length === 0) {
@@ -150,14 +194,25 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
   const filteredScores = useMemo(() => {
     if (!activeTimeBucket) return [];
     return scores
-      .filter((s) => s.mode === activeMode && s.timeBucket === activeTimeBucket)
+      .filter(
+        (s) =>
+          s.mode === activeMode &&
+          s.timeBucket === activeTimeBucket &&
+          wordListSectionKey(s.wordList) === activeSection
+      )
       .sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
-  }, [scores, activeMode, activeTimeBucket]);
+  }, [scores, activeMode, activeTimeBucket, activeSection]);
 
-  const handleClear = () => {
+  const handleClearAll = () => {
     clearHighScores();
     setScores([]);
-    setShowConfirmClear(false);
+    setConfirmClear('none');
+  };
+
+  const handleClearSection = () => {
+    const remaining = clearHighScoreSection(activeMode, activeSection);
+    setScores(remaining);
+    setConfirmClear('none');
   };
 
   return (
@@ -174,7 +229,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                 Leaderboard
               </h2>
               <span className="text-xs font-semibold text-amber-400/90 block">
-                High Scores by Mode &amp; Time
+                High Scores by Mode, Word List &amp; Time
               </span>
             </div>
           </div>
@@ -203,7 +258,10 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                   <button
                     key={mode}
                     type="button"
-                    onClick={() => setActiveMode(mode)}
+                    onClick={() => {
+                      setActiveMode(mode);
+                      setConfirmClear('none');
+                    }}
                     className={`flex-1 min-w-[100px] py-2 px-3 rounded-xl border font-display font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       isSelected
                         ? meta.activeClasses
@@ -224,13 +282,53 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
               })}
             </div>
 
+            {/* Word List Section Tabs */}
+            {availableSections.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                {availableSections.map((sec) => {
+                  const isSelected = activeSection === sec.key;
+                  const secCount = scores.filter(
+                    (s) => s.mode === activeMode && wordListSectionKey(s.wordList) === sec.key
+                  ).length;
+                  return (
+                    <button
+                      key={sec.key}
+                      type="button"
+                      onClick={() => {
+                        setActiveSection(sec.key);
+                        setConfirmClear('none');
+                      }}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-teal-400 text-slate-950 border-teal-200 shadow-sm'
+                          : 'bg-slate-800/60 border-slate-700/80 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <BookOpen className="w-3 h-3" />
+                      <span className="max-w-[140px] truncate">{sec.label}</span>
+                      <span
+                        className={`text-[10px] font-mono ${
+                          isSelected ? 'text-slate-800' : 'text-slate-400'
+                        }`}
+                      >
+                        ({secCount})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Time Option Sub-Tabs */}
             {availableTimeBuckets.length > 0 && (
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
                 {availableTimeBuckets.map((bucket) => {
                   const isSelected = activeTimeBucket === bucket;
                   const bucketCount = scores.filter(
-                    (s) => s.mode === activeMode && s.timeBucket === bucket
+                    (s) =>
+                      s.mode === activeMode &&
+                      s.timeBucket === bucket &&
+                      wordListSectionKey(s.wordList) === activeSection
                   ).length;
                   return (
                     <button
@@ -283,6 +381,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                 <span className="text-xs text-slate-300 font-medium block truncate">
                   {lastResult.totalWords} words · Longest: {lastResult.longestWord || '-'}
                   {lastResult.timeBucket ? ` · ${formatTimeBucketLabel(lastResult.timeBucket)}` : ''}
+                  {` · ${lastResult.wordList || 'All words'}`}
                 </span>
               </div>
             </div>
@@ -411,36 +510,53 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
 
         {/* Footer controls */}
         <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
-          {showConfirmClear ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-rose-400 font-bold">Clear all scores?</span>
+          {confirmClear !== 'none' ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-rose-400 font-bold">
+                {confirmClear === 'all'
+                  ? 'Delete ALL scores in every section?'
+                  : `Delete all ${MODE_META[activeMode].label} scores for "${activeSectionLabel}"?`}
+              </span>
               <button
                 type="button"
-                onClick={handleClear}
+                onClick={confirmClear === 'all' ? handleClearAll : handleClearSection}
                 className="px-3 py-1.5 text-xs font-black rounded-xl bg-rose-600 hover:bg-rose-500 text-white cursor-pointer"
               >
-                Yes, clear
+                Yes, delete
               </button>
               <button
                 type="button"
-                onClick={() => setShowConfirmClear(false)}
+                onClick={() => setConfirmClear('none')}
                 className="px-2.5 py-1.5 text-xs rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer"
               >
                 Cancel
               </button>
             </div>
-          ) : (
-            scores.length > 0 ? (
+          ) : scores.length > 0 ? (
+            <div className="flex flex-col items-start gap-1">
+              {availableSections.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmClear('section')}
+                  className="text-xs font-semibold text-slate-400 hover:text-rose-400 flex items-center gap-1.5 transition-colors cursor-pointer py-0.5"
+                  title="Reset only this section of the leaderboard"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="max-w-[170px] truncate">Reset "{activeSectionLabel}"</span>
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setShowConfirmClear(true)}
-                className="text-xs font-semibold text-slate-500 hover:text-rose-400 flex items-center gap-1.5 transition-colors cursor-pointer py-1"
-                title="Reset all high scores"
+                onClick={() => setConfirmClear('all')}
+                className="text-[11px] font-semibold text-slate-500 hover:text-rose-400 flex items-center gap-1.5 transition-colors cursor-pointer py-0.5"
+                title="Reset every leaderboard section"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Reset Leaderboard</span>
+                <Trash2 className="w-3 h-3" />
+                <span>Reset all</span>
               </button>
-            ) : <div />
+            </div>
+          ) : (
+            <div />
           )}
 
           <div className="flex items-center gap-2 ml-auto">

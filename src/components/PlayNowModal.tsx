@@ -32,9 +32,9 @@ interface PlayNowModalProps {
   onLaunchSoloAllWords: () => void;
   onLaunchSoloWordList: () => void;
   onLaunchTeamMatch: (config: ClassroomConfig) => void;
-  onOpenWordListSetup: () => void;
-  wordListCount: number;
-  wordListPreview?: string[];
+  /** Word list chosen on the start screen; Team just shows it */
+  useWordList: boolean;
+  activeWordListLabel: string;
   isWide: boolean;
   initialStep?: 'mode' | 'team_setup' | 'words';
   initialMode?: 'solo' | 'team';
@@ -46,9 +46,8 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
   onLaunchSoloAllWords,
   onLaunchSoloWordList,
   onLaunchTeamMatch,
-  onOpenWordListSetup,
-  wordListCount,
-  wordListPreview: _wordListPreview = [],
+  useWordList,
+  activeWordListLabel,
   isWide,
   initialStep = 'team_setup',
   initialMode = 'team',
@@ -58,7 +57,6 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
   // For Team: 'mode' -> 'team_setup' -> 'words'
   const [step, setStep] = useState<'mode' | 'team_setup' | 'words'>(initialStep);
   const [selectedMode, setSelectedMode] = useState<'solo' | 'team'>(initialMode);
-  const [selectedWordSource, setSelectedWordSource] = useState<'all' | 'word_list'>('all');
 
   React.useEffect(() => {
     if (isOpen) {
@@ -81,7 +79,11 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
 
   const handleSelectSolo = () => {
     setSelectedMode('solo');
-    setStep('words');
+    if (useWordList) {
+      onLaunchSoloWordList();
+    } else {
+      onLaunchSoloAllWords();
+    }
   };
 
   const handleSelectTeam = () => {
@@ -89,55 +91,19 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
     setStep('team_setup');
   };
 
-  const handleProceedFromTeamSetup = () => {
-    // Save updated team config before moving to word selection
-    const updatedConfig: ClassroomConfig = {
-      ...classroomConfig,
-      teams: teams.map((t) => ({
-        ...t,
-        score: 0,
-        wordsFound: [],
-        turnsCompleted: 0,
-        name: t.name.trim() || `Team ${t.emoji}`,
-      })),
-      turnCondition,
-      turnSeconds,
-      turnWordsTarget,
-      totalRounds,
-      cleanBoardEachTurn,
-    };
-    setClassroomConfig(updatedConfig);
-    saveClassroomConfig(updatedConfig);
-    setStep('words');
-  };
-
   const handleBack = () => {
     if (step === initialStep) {
       onClose();
       return;
     }
-    if (step === 'team_setup') {
+    if (step === 'team_setup' || step === 'words') {
       setStep('mode');
-    } else if (step === 'words') {
-      if (selectedMode === 'team') {
-        setStep('team_setup');
-      } else {
-        setStep('mode');
-      }
     }
   };
 
   const handleLaunch = () => {
     if (selectedMode === 'solo') {
-      if (selectedWordSource === 'all') {
-        onLaunchSoloAllWords();
-      } else {
-        if (wordListCount === 0) {
-          onOpenWordListSetup();
-        } else {
-          onLaunchSoloWordList();
-        }
-      }
+      handleSelectSolo();
     } else {
       // Team Match
       const finalConfig: ClassroomConfig = {
@@ -154,7 +120,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
         turnWordsTarget,
         totalRounds,
         cleanBoardEachTurn,
-        useSpellingList: selectedWordSource === 'word_list' && wordListCount > 0,
+        useSpellingList: useWordList,
       };
       saveClassroomConfig(finalConfig);
       onLaunchTeamMatch(finalConfig);
@@ -204,7 +170,41 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
     setTeams(updated);
   };
 
+  // Colors theme: the emoji, colour and name are one identity (Team Blue = 🔵 + blue).
+  // Step to the next colour preset so icon, colour and name always match.
+  const stepColorTeam = (index: number): boolean => {
+    const team = teams[index];
+    const colorPresets = TEAM_NAME_PRESETS.colors;
+    const byEmoji = colorPresets.findIndex((p) => p.emoji === team.emoji);
+    const byColor = TEAM_COLOR_PALETTES.findIndex((p) => p.color === team.color);
+    const curIdx = byEmoji >= 0 ? byEmoji : byColor;
+    if (activeTheme !== 'colors' && byEmoji < 0) return false;
+    // Skip colours already used by other teams so two teams never share one
+    const usedEmojis = new Set(teams.filter((_, i) => i !== index).map((t) => t.emoji));
+    let nextIdx = (curIdx + 1 + colorPresets.length) % colorPresets.length;
+    for (let tries = 0; tries < colorPresets.length && usedEmojis.has(colorPresets[nextIdx].emoji); tries++) {
+      nextIdx = (nextIdx + 1) % colorPresets.length;
+    }
+    const nextPreset = colorPresets[nextIdx];
+    const nextPalette = TEAM_COLOR_PALETTES[nextIdx % TEAM_COLOR_PALETTES.length];
+    const isPresetName =
+      !team.name.trim() || colorPresets.some((p) => p.name === team.name.trim());
+    const updated = [...teams];
+    updated[index] = {
+      ...team,
+      emoji: nextPreset.emoji,
+      name: isPresetName ? nextPreset.name : team.name,
+      color: nextPalette.color,
+      colorBg: nextPalette.colorBg,
+      colorBorder: nextPalette.colorBorder,
+      colorText: nextPalette.colorText,
+    };
+    setTeams(updated);
+    return true;
+  };
+
   const handleCycleColor = (index: number) => {
+    if (stepColorTeam(index)) return;
     const updated = [...teams];
     const currentColor = updated[index].color;
     const paletteIndex = TEAM_COLOR_PALETTES.findIndex((p) => p.color === currentColor);
@@ -220,6 +220,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
   };
 
   const handleCycleEmoji = (index: number) => {
+    if (stepColorTeam(index)) return;
     let pool: string[];
     if (activeTheme === 'animals') {
       pool = ['🦁', '🐬', '🦅', '🐼', '🦊', '🐻', '🐯', '🦉', '🦖', '🦄', '🐺', '🐨'];
@@ -231,7 +232,6 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
       // 'all'
       pool = [
         '🦁', '🐬', '🦅', '🐼', '🦊', '🐻', '🐯', '🦉', '🦖', '🦄',
-        '🔵', '🔴', '🟢', '🟡', '🟣', '🌸', '🟠',
         '🚀', '☄️', '⭐', '⚡', '🪐', '🔥', '🛰️', '🛸',
       ];
     }
@@ -284,7 +284,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
               <h2 className="text-xl sm:text-2xl font-display font-black text-white leading-tight">
                 {step === 'mode' && 'Play Now'}
                 {step === 'team_setup' && 'Organize Teams'}
-                {step === 'words' && 'Word Selection'}
+
               </h2>
             </div>
           </div>
@@ -326,7 +326,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                   </div>
 
                   <div className="flex items-center justify-between text-xs font-bold text-amber-400 pt-3 border-t border-slate-700/60 mt-4">
-                    <span>Next: Choose Words</span>
+                    <span>Start: {activeWordListLabel}</span>
                     <span className="text-base group-hover:translate-x-1 transition-transform">➔</span>
                   </div>
                 </button>
@@ -603,151 +603,28 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                 </button>
               </div>
 
-              {/* Next Button */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleProceedFromTeamSetup}
-                  className="w-full min-h-[56px] px-6 rounded-2xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-display font-black text-lg flex items-center justify-center gap-2 shadow-xl shadow-indigo-500/25 active:scale-95 transition-all cursor-pointer"
-                >
-                  <span>Next: Word Selection</span>
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: Word Selection (All Words vs Word List) */}
-          {step === 'words' && (
-            <div className="space-y-4">
-              {/* Header Mode Indicator */}
-              <div className="flex items-center justify-between px-4 py-2.5 rounded-2xl bg-slate-800/60 border border-slate-700/80 text-xs sm:text-sm">
-                <div className="flex items-center gap-2">
-                  {selectedMode === 'solo' ? (
-                    <User className="w-4 h-4 text-amber-400" />
-                  ) : (
-                    <Users className="w-4 h-4 text-indigo-400" />
-                  )}
-                  <span className="text-slate-400 font-medium">Mode:</span>
-                  <strong className="text-white">
-                    {selectedMode === 'solo' ? 'Solo Play' : `Team Play (${teams.length} Teams)`}
-                  </strong>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setStep(selectedMode === 'team' ? 'team_setup' : 'mode')}
-                  className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
-                >
-                  Edit
-                </button>
+              {/* Word list (chosen on the start screen) */}
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/60 border border-slate-700/80 text-xs sm:text-sm">
+                <BookOpen className="w-4 h-4 text-teal-400 shrink-0" />
+                <span className="text-slate-400 font-medium">Word list:</span>
+                <strong className="text-white truncate">{activeWordListLabel}</strong>
+                <span className="ml-auto text-[11px] text-slate-500 shrink-0">change on Home</span>
               </div>
 
-              {/* Cards for All Words vs Word List */}
-              <div className={`grid ${isWide ? 'grid-cols-2 gap-4' : 'grid-cols-1 gap-3'}`}>
-                {/* Option A: All Words */}
-                <div
-                  onClick={() => setSelectedWordSource('all')}
-                  className={`p-5 rounded-3xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[140px] ${
-                    selectedWordSource === 'all'
-                      ? 'bg-amber-500/10 border-amber-400 shadow-xl shadow-amber-500/15'
-                      : 'bg-slate-800/70 border-slate-700 hover:bg-slate-800'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300">
-                        <BookOpen className="w-6 h-6" />
-                      </div>
-                      {selectedWordSource === 'all' && (
-                        <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center">
-                          <Check className="w-4 h-4 stroke-[3]" />
-                        </div>
-                      )}
-                    </div>
-
-                    <span className="font-display font-black text-2xl text-white block">
-                      All Words
-                    </span>
-                  </div>
-
-                  <span className="text-xs font-semibold text-amber-400 font-mono mt-3">
-                    Full dictionary
-                  </span>
-                </div>
-
-                {/* Option B: Word List */}
-                <div
-                  onClick={() => setSelectedWordSource('word_list')}
-                  className={`p-5 rounded-3xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between min-h-[140px] ${
-                    selectedWordSource === 'word_list'
-                      ? 'bg-teal-500/10 border-teal-400 shadow-xl shadow-teal-500/15'
-                      : 'bg-slate-800/70 border-slate-700 hover:bg-slate-800'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-12 h-12 rounded-2xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-300">
-                        <Sparkles className="w-6 h-6" />
-                      </div>
-                      {selectedWordSource === 'word_list' && (
-                        <div className="w-6 h-6 rounded-full bg-teal-400 text-teal-950 flex items-center justify-center">
-                          <Check className="w-4 h-4 stroke-[3]" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-display font-black text-2xl text-white block">
-                        Word List
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenWordListSetup();
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-400/50 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Edit words</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs font-semibold text-teal-300 mt-3 pt-2 border-t border-slate-700/60">
-                    <span>
-                      {wordListCount > 0
-                        ? `${wordListCount} ${wordListCount === 1 ? 'word' : 'words'} loaded`
-                        : 'No words entered yet'}
-                    </span>
-                    {wordListCount === 0 && (
-                      <span className="text-amber-400 font-bold">Tap Edit to add</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Start Game Button */}
+              {/* Start Button */}
               <div className="pt-2">
                 <button
                   type="button"
                   onClick={handleLaunch}
-                  className={`w-full min-h-[56px] sm:min-h-[64px] px-6 rounded-2xl font-display font-black text-lg sm:text-xl flex items-center justify-center gap-2.5 shadow-xl transition-all cursor-pointer active:scale-[0.98] ${
-                    selectedMode === 'solo'
-                      ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 shadow-amber-500/20'
-                      : 'bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-indigo-500/25'
-                  }`}
+                  className="w-full min-h-[56px] px-6 rounded-2xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-display font-black text-lg flex items-center justify-center gap-2 shadow-xl shadow-indigo-500/25 active:scale-95 transition-all cursor-pointer"
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  <span>
-                    {selectedMode === 'solo' ? 'Start Game!' : 'Start Team Match!'}
-                  </span>
+                  <span>Start Team Match!</span>
                 </button>
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>

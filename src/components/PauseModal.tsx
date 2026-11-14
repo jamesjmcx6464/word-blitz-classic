@@ -286,7 +286,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             <GameOptionsPanel
               settings={localSettings}
               onChange={handleSettingsChange}
-              showTimer={!classroomMatch}
+              showTimer={false}
             />
 
             <button

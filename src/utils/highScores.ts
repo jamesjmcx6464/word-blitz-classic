@@ -8,6 +8,8 @@ export interface HighScoreEntry {
   difficulty?: DifficultyLevel;
   playerName?: string;
   playerLogo?: string;
+  /** Word list name used for the run. Undefined = "All words" (full dictionary). */
+  wordList?: string;
   score: number;
   longestWord: string;
   totalWords: number;
@@ -16,6 +18,15 @@ export interface HighScoreEntry {
 }
 
 const STORAGE_KEY = 'word_blitz_high_scores_v1';
+
+export const ALL_WORDS_SECTION = '__all__';
+
+/** Section key for an entry's word list (old entries without one land in All words). */
+export function wordListSectionKey(wordList?: string): string {
+  const clean = (wordList || '').trim();
+  return clean ? `list:${clean.toLowerCase()}` : ALL_WORDS_SECTION;
+}
+
 const MAX_ENTRIES_PER_BUCKET = 30;
 
 export function makeTimeBucketKey(kind: 'timer' | 'words', value: number): string {
@@ -139,6 +150,10 @@ function migrateEntry(raw: Record<string, unknown>): {
         : undefined,
     playerName,
     playerLogo,
+    wordList:
+      typeof raw.wordList === 'string' && raw.wordList.trim().length > 0
+        ? raw.wordList.trim()
+        : undefined,
     score: typeof raw.score === 'number' ? raw.score : 0,
     longestWord: typeof raw.longestWord === 'string' && raw.longestWord ? raw.longestWord : '-',
     totalWords: typeof raw.totalWords === 'number' ? raw.totalWords : 0,
@@ -159,7 +174,7 @@ function migrateEntry(raw: Record<string, unknown>): {
 function capBuckets(entries: HighScoreEntry[]): HighScoreEntry[] {
   const byBucket = new Map<string, HighScoreEntry[]>();
   for (const e of entries) {
-    const key = `${e.mode}::${e.timeBucket}`;
+    const key = `${e.mode}::${wordListSectionKey(e.wordList)}::${e.timeBucket}`;
     const arr = byBucket.get(key) || [];
     arr.push(e);
     byBucket.set(key, arr);
@@ -230,6 +245,7 @@ export interface SaveHighScoreParams {
   totalWords: number;
   playerName?: string;
   playerLogo?: string;
+  wordList?: string;
   allowZeroScore?: boolean;
 }
 
@@ -246,6 +262,7 @@ export function saveHighScore(
     totalWords,
     playerName,
     playerLogo,
+    wordList,
     allowZeroScore = false,
   } = params;
 
@@ -263,6 +280,7 @@ export function saveHighScore(
     difficulty,
     playerName: playerName?.trim() || undefined,
     playerLogo: playerLogo || undefined,
+    wordList: wordList?.trim() || undefined,
     score,
     longestWord: longestWord || '-',
     totalWords,
@@ -283,9 +301,15 @@ export function saveHighScore(
     console.error('Failed to save high scores:', err);
   }
 
-  // Compute rank strictly within this (mode, timeBucket) bucket
+  // Compute rank strictly within this (mode, word list, timeBucket) bucket
+  const sectionKey = wordListSectionKey(wordList);
   const bucketScores = capped
-    .filter((s) => s.mode === mode && s.timeBucket === timeBucket)
+    .filter(
+      (s) =>
+        s.mode === mode &&
+        s.timeBucket === timeBucket &&
+        wordListSectionKey(s.wordList) === sectionKey
+    )
     .sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
 
   const rank = bucketScores.findIndex((s) => s.id === entry.id);
@@ -296,4 +320,20 @@ export function saveHighScore(
 
 export function clearHighScores() {
   localStorage.removeItem(STORAGE_KEY);
+}
+
+/**
+ * Removes every score in one leaderboard section (a mode + word list pair, all timers).
+ * Returns the remaining scores.
+ */
+export function clearHighScoreSection(mode: LeaderboardMode, sectionKey: string): HighScoreEntry[] {
+  const remaining = getHighScores().filter(
+    (s) => !(s.mode === mode && wordListSectionKey(s.wordList) === sectionKey)
+  );
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(remaining));
+  } catch (err) {
+    console.error('Failed to clear leaderboard section:', err);
+  }
+  return remaining;
 }

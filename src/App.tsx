@@ -221,6 +221,28 @@ export default function App() {
     }
   };
 
+  // Word list chosen on the start screen (applies to Quick Play, Solo and Team)
+  const isWordListActive = () =>
+    freePlaySettingsRef.current.spellingWordsEnabled &&
+    parseSpellingWords(freePlaySettingsRef.current.spellingWordsList).length > 0;
+  const activeWordListName = (): string | undefined =>
+    isWordListActive() ? freePlaySettingsRef.current.wordListName || 'My list' : undefined;
+
+  const handleSelectWordList = (choice: null | 'current' | { name: string; words: string }) => {
+    if (choice === null) {
+      handleUpdateFreePlaySettings({ ...freePlaySettingsRef.current, spellingWordsEnabled: false });
+    } else if (choice === 'current') {
+      handleUpdateFreePlaySettings({ ...freePlaySettingsRef.current, spellingWordsEnabled: true });
+    } else {
+      handleUpdateFreePlaySettings({
+        ...freePlaySettingsRef.current,
+        spellingWordsList: choice.words,
+        wordListName: choice.name,
+        spellingWordsEnabled: true,
+      });
+    }
+  };
+
   const handleChangeDifficulty = (level: DifficultyLevel) => {
     setDifficulty(level);
     difficultyRef.current = level;
@@ -245,6 +267,11 @@ export default function App() {
   const parsedSpellingWords = React.useMemo(() => {
     return parseSpellingWords(freePlaySettings.spellingWordsList);
   }, [freePlaySettings.spellingWordsList]);
+
+  const activeWordListLabel =
+    freePlaySettings.spellingWordsEnabled && parsedSpellingWords.length > 0
+      ? `${freePlaySettings.wordListName || 'My list'} (${parsedSpellingWords.length})`
+      : 'All words';
 
   const parsedSpellingWordsSet = React.useMemo(() => {
     return new Set(parsedSpellingWords);
@@ -400,6 +427,10 @@ export default function App() {
     const roundSec = activeRoundSecondsRef.current;
     const timeBucket = makeTimeBucketKey('timer', roundSec);
     const mode = activePlayer ? 'solo' : 'quick';
+    const runWordList =
+      freePlaySettingsRef.current.spellingWordsEnabled && parsedSpellingWordsRef.current.length > 0
+        ? freePlaySettingsRef.current.wordListName || 'My list'
+        : undefined;
 
     if (activePlayer) {
       recordSoloPlayerResult(activePlayer.name, activePlayer.logo, scoreRef.current);
@@ -415,6 +446,7 @@ export default function App() {
       totalWords: totalWordsClearedRef.current,
       playerName: activePlayer?.name,
       playerLogo: activePlayer?.logo,
+      wordList: runWordList,
     });
     setGameOverStats({ rank: stats.rank, isNewHighScore: stats.isNewHighScore });
 
@@ -424,6 +456,7 @@ export default function App() {
         entryId: stats.entryId,
         mode: 'solo',
         timeBucket,
+        wordList: runWordList,
         playerName: activePlayer.name,
         playerLogo: activePlayer.logo,
         score: scoreRef.current,
@@ -512,6 +545,9 @@ export default function App() {
             : makeTimeBucketKey('words', cur.config.turnWordsTarget);
         const teamTimeSec =
           cur.config.turnCondition === 'timer' ? cur.config.turnSeconds : undefined;
+        const teamWordList = cur.config.useSpellingList
+          ? freePlaySettingsRef.current.wordListName || 'My list'
+          : undefined;
 
         updatedTeams.forEach((team) => {
           const teamLongest = team.wordsFound.reduce(
@@ -528,6 +564,7 @@ export default function App() {
             totalWords: team.wordsFound.length,
             playerName: team.name,
             playerLogo: team.emoji,
+            wordList: teamWordList,
             allowZeroScore: true,
           });
         });
@@ -727,7 +764,8 @@ export default function App() {
       ceilingHeight: preset.ceilingHeight,
       speedIncreaseRate: preset.speedIncreaseRate,
       spellingWordsList: freePlaySettingsRef.current.spellingWordsList,
-      spellingWordsEnabled: false,
+      wordListName: freePlaySettingsRef.current.wordListName,
+      spellingWordsEnabled: isWordListActive(),
       timeLimit: timeLimitSec,
       speedIncreaseEnabled: true,
     };
@@ -756,9 +794,9 @@ export default function App() {
   const handleStartNamedSolo = (
     playerName: string,
     playerLogo: string,
-    useWordList: boolean,
     roundSeconds: number
   ) => {
+    const useWordList = isWordListActive();
     const player = { name: playerName, logo: playerLogo };
     setCurrentSoloPlayer(player);
     currentSoloPlayerRef.current = player;
@@ -787,7 +825,8 @@ export default function App() {
   };
 
   // Classroom: Start Match from Setup
-  const handleStartClassroomMatch = (config: ClassroomConfig) => {
+  const handleStartClassroomMatch = (incoming: ClassroomConfig) => {
+    const config: ClassroomConfig = { ...incoming, useSpellingList: isWordListActive() };
     const preset = DIFFICULTY_PRESETS[difficultyRef.current];
     handleUpdateFreePlaySettings({
       ...freePlaySettingsRef.current,
@@ -1379,6 +1418,11 @@ export default function App() {
           screenMode={screenMode}
           difficulty={difficulty}
           onChangeDifficulty={handleChangeDifficulty}
+          wordListEnabled={freePlaySettings.spellingWordsEnabled}
+          wordListName={freePlaySettings.wordListName || 'My list'}
+          wordListCount={parsedSpellingWords.length}
+          onSelectWordList={handleSelectWordList}
+          onOpenWordListEditor={() => setIsSpellingSetupOpen(true)}
         />
       )}
 
@@ -1387,8 +1431,7 @@ export default function App() {
         isOpen={isSoloSetupOpen}
         onClose={() => setIsSoloSetupOpen(false)}
         onStartSolo={handleStartNamedSolo}
-        onOpenWordListSetup={() => setIsSpellingSetupOpen(true)}
-        wordListCount={parsedSpellingWords.length}
+        activeWordListLabel={activeWordListLabel}
         isWide={viewMode === 'wide'}
       />
 
@@ -1408,9 +1451,8 @@ export default function App() {
           setIsTeamSetupOpen(false);
           handleStartClassroomMatch(config);
         }}
-        onOpenWordListSetup={() => setIsSpellingSetupOpen(true)}
-        wordListCount={parsedSpellingWords.length}
-        wordListPreview={parsedSpellingWords}
+        useWordList={freePlaySettings.spellingWordsEnabled && parsedSpellingWords.length > 0}
+        activeWordListLabel={activeWordListLabel}
         isWide={viewMode === 'wide'}
         initialStep="team_setup"
         initialMode="team"
@@ -1446,8 +1488,8 @@ export default function App() {
           matchState={classroomMatch}
           onRematch={handleClassroomRematch}
           onNewMatchSetup={() => {
-            setIsClassroomSetupOpen(true);
             setScreen('MENU');
+            setIsTeamSetupOpen(true);
           }}
           onExitToMenu={handleExitClassroomToMenu}
           isWide={viewMode === 'wide'}
@@ -1476,11 +1518,16 @@ export default function App() {
         <SpellingListSetup
           settings={freePlaySettings}
           onUpdateSettings={handleUpdateFreePlaySettings}
-          onStart={() => {
+          onClose={() => {
+            // Done: an emptied list falls back to All words
+            if (parseSpellingWords(freePlaySettingsRef.current.spellingWordsList).length === 0) {
+              handleUpdateFreePlaySettings({
+                ...freePlaySettingsRef.current,
+                spellingWordsEnabled: false,
+              });
+            }
             setIsSpellingSetupOpen(false);
-            startFree(true);
           }}
-          onClose={() => setIsSpellingSetupOpen(false)}
           isWide={viewMode === 'wide'}
         />
       )}
