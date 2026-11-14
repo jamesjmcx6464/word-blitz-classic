@@ -28,7 +28,7 @@ import {
   findGroundedHexIds,
   computeScreenSpeedMultiplier,
 } from './utils/hexPhysics';
-import { drawRandomLetter, LetterTileInfo } from './utils/letterBag';
+import { drawRandomLetter, drawBalancedLetter, LetterTileInfo } from './utils/letterBag';
 import { isValidWord, getWordScore } from './data/dictionary';
 import { soundManager } from './utils/audio';
 import { saveHighScore, makeTimeBucketKey } from './utils/highScores';
@@ -568,7 +568,9 @@ export default function App() {
       return;
     }
 
-    const letter: LetterTileInfo = drawRandomLetter();
+    const diffNow = difficultyRef.current;
+    const letter: LetterTileInfo =
+      diffNow === 'beginner' || diffNow === 'easy' ? drawBalancedLetter() : drawRandomLetter();
 
     const newTile: HexTile = {
       id: `tile_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${Math.floor(performance.now() * 100)}`,

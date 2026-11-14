@@ -87,3 +87,44 @@ export function drawRandomLetter(modifiers?: LetterSpawnModifiers): LetterTileIn
   // Q and U are always separate single letters
   return { display: chosen, value: chosen };
 }
+
+// Beginner/Easy balance: after 5 vowels in a row force a consonant, after 5 consonants force a vowel.
+// Otherwise the standard Cornell distribution. Y counts as a consonant.
+export const BALANCE_STREAK_LIMIT = 5;
+let streakKind: 'vowel' | 'consonant' | null = null;
+let streakCount = 0;
+
+export function resetLetterStreak(): void {
+  streakKind = null;
+  streakCount = 0;
+}
+
+function drawFrom(pool: Array<{ letter: string; weight: number }>): string {
+  const total = pool.reduce((sum, item) => sum + item.weight, 0);
+  const r = Math.random() * total;
+  let running = 0;
+  for (const item of pool) {
+    running += item.weight;
+    if (r <= running) return item.letter;
+  }
+  return pool[pool.length - 1].letter;
+}
+
+export function drawBalancedLetter(): LetterTileInfo {
+  let chosen: string;
+  if (streakCount >= BALANCE_STREAK_LIMIT && streakKind === 'vowel') {
+    chosen = drawFrom(BASE_LETTER_WEIGHTS.filter((i) => !VOWELS.has(i.letter)));
+  } else if (streakCount >= BALANCE_STREAK_LIMIT && streakKind === 'consonant') {
+    chosen = drawFrom(BASE_LETTER_WEIGHTS.filter((i) => VOWELS.has(i.letter)));
+  } else {
+    chosen = drawFrom(BASE_LETTER_WEIGHTS);
+  }
+  const kind = VOWELS.has(chosen) ? 'vowel' : 'consonant';
+  if (kind === streakKind) {
+    streakCount += 1;
+  } else {
+    streakKind = kind;
+    streakCount = 1;
+  }
+  return { display: chosen, value: chosen };
+}
