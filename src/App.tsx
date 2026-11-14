@@ -966,8 +966,11 @@ export default function App() {
     setErrorMessage(null);
   };
 
+  const NO_SPEEDUP_ON_ENTER = true;
   // Bump both fall speed and spawn rate whenever a word is entered (success or failure)
   const bumpPaceOnWordEnter = () => {
+    // James 2026-11-14: entering a word never speeds the game up, in any mode or difficulty.
+    if (NO_SPEEDUP_ON_ENTER) return;
     if (
       !classroomMatchRef.current &&
       (dynamicPaceEnabledRef.current || freePlaySettingsRef.current.speedIncreaseEnabled)
