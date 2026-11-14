@@ -23,6 +23,13 @@ for (const item of COMMON_PROFESSIONS_AND_SCIENCES) {
   }
 }
 
+// Months of the year (proper nouns missing from the base word list)
+const MONTHS = [
+  'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+  'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER',
+];
+for (const m of MONTHS) wordSet.add(m);
+
 
 export function isValidWord(word: string): boolean {
   if (!word || word.length < 2) return false;
