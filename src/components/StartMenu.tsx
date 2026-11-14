@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ScreenModeType, DifficultyChoice, DIFFICULTY_PRESETS } from '../types/game';
 import { DifficultyPicker } from './DifficultyPicker';
+import { TimerToggle } from './TimerToggle';
 
 interface StartMenuProps {
   onQuickPlay: () => void;
@@ -26,6 +27,9 @@ interface StartMenuProps {
   /** True once the player has saved custom Settings (shows the Custom difficulty). */
   hasCustomSettings: boolean;
   onOpenSettings: () => void;
+  /** Quick Play timer: on = 2-minute round, off = endless until the pile reaches the line */
+  quickPlayTimerOn: boolean;
+  onChangeQuickPlayTimer: (on: boolean) => void;
 }
 
 export const StartMenu: React.FC<StartMenuProps> = ({
@@ -40,6 +44,8 @@ export const StartMenu: React.FC<StartMenuProps> = ({
   onChangeDifficulty,
   hasCustomSettings,
   onOpenSettings,
+  quickPlayTimerOn,
+  onChangeQuickPlayTimer,
 }) => {
   const isWide = screenMode === 'pc';
   const activeLabel =
@@ -151,7 +157,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
                   Quick Play
                 </span>
                 <span className="text-xs sm:text-sm font-extrabold text-slate-900/80 block mt-0.5">
-                  2-Minute Round · {activeLabel} Mode
+                  {quickPlayTimerOn ? '2-Minute Round' : 'No timer'} · {activeLabel} Mode
                 </span>
               </div>
             </div>
@@ -159,6 +165,13 @@ export const StartMenu: React.FC<StartMenuProps> = ({
               <Play className="w-5 h-5 fill-current ml-0.5" />
             </div>
           </button>
+          <TimerToggle
+            className="mt-2"
+            timerOn={quickPlayTimerOn}
+            onChange={onChangeQuickPlayTimer}
+            onLabel="Timer on · 2 min"
+            offLabel="Timer off"
+          />
         </div>
 
         {/* 3. Solo Play & Team Play Buttons */}

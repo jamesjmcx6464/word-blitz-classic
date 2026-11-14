@@ -32,7 +32,7 @@ export function formatTimeBucketLabel(timeBucket: string): string {
   }
   if (timeBucket.startsWith('time:')) {
     const sec = Number(timeBucket.slice('time:'.length));
-    if (!Number.isFinite(sec) || sec <= 0) return 'No Timer';
+    if (!Number.isFinite(sec) || sec <= 0) return 'No timer';
     if (sec === 60) return '1 min';
     if (sec < 60 || sec % 60 !== 0) return `${sec}s`;
     const mins = sec / 60;

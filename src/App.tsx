@@ -716,9 +716,30 @@ export default function App() {
     });
   };
 
-  // Quick Play: Immediate start with active Difficulty defaults (2 min timer, pace rises on word enter)
+  // Quick Play timer on/off (persisted). Off = endless round, ends when the pile reaches the line.
+  const QUICK_TIMER_KEY = 'word_blitz_quick_play_timer_v1';
+  const [quickPlayTimerOn, setQuickPlayTimerOn] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('word_blitz_quick_play_timer_v1') !== 'off';
+    } catch {
+      return true;
+    }
+  });
+  const quickPlayTimerOnRef = useRef<boolean>(quickPlayTimerOn);
+  quickPlayTimerOnRef.current = quickPlayTimerOn;
+  const handleChangeQuickPlayTimer = (on: boolean) => {
+    setQuickPlayTimerOn(on);
+    quickPlayTimerOnRef.current = on;
+    try {
+      localStorage.setItem(QUICK_TIMER_KEY, on ? 'on' : 'off');
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  // Quick Play: Immediate start with active Difficulty defaults (2 min timer or no timer, pace rises on word enter)
   const handleQuickPlay = () => {
-    launchQuickPlayWithConfig(difficultyRef.current, 120);
+    launchQuickPlayWithConfig(difficultyRef.current, quickPlayTimerOnRef.current ? 120 : 0);
   };
 
   // Quick Play "Play Again": restart Quick Play with the exact same settings as the finished run
@@ -1314,6 +1335,8 @@ export default function App() {
           onChangeDifficulty={handleChangeDifficulty}
           hasCustomSettings={customSettings !== null}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          quickPlayTimerOn={quickPlayTimerOn}
+          onChangeQuickPlayTimer={handleChangeQuickPlayTimer}
         />
       )}
 
@@ -1480,7 +1503,7 @@ export default function App() {
                   const preset = configFor(difficultyRef.current);
                   if (currentSoloPlayer) {
                     handleStartGame({
-                      timeLimit: freePlaySettingsRef.current.timeLimit || 60,
+                      timeLimit: activeRoundSecondsRef.current, // 0 = no timer
                       dropSpeed: preset.dropSpeed,
                       spawnIntervalMs: preset.spawnIntervalMs,
                       dynamicPace: preset.paceEnabled,

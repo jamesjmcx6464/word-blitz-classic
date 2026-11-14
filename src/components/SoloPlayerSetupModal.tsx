@@ -20,6 +20,7 @@ import {
 } from '../utils/registeredPlayers';
 import { DifficultyChoice } from '../types/game';
 import { DifficultyPicker } from './DifficultyPicker';
+import { TimerToggle } from './TimerToggle';
 
 interface SoloPlayerSetupModalProps {
   isOpen: boolean;
@@ -55,6 +56,8 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
     'all' | 'animals' | 'space' | 'sports' | 'gems'
   >('all');
   const [roundSeconds, setRoundSeconds] = useState<number>(60);
+  // Timer off = endless round (0 s), ends when the pile reaches the line
+  const [timerOn, setTimerOn] = useState<boolean>(true);
 
   // Carousel mouse-drag scroll state
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -160,7 +163,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
     onStartSolo(
       registered.name,
       registered.logo,
-      roundSeconds
+      timerOn ? roundSeconds : 0
     );
   };
 
@@ -458,6 +461,13 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
               <label className="font-display font-black text-xs uppercase tracking-wider text-slate-400 block">
                 Timer
               </label>
+              <TimerToggle timerOn={timerOn} onChange={setTimerOn} />
+              {!timerOn && (
+                <p className="text-[11px] text-slate-400 font-medium">
+                  No timer: play until the letters reach the line.
+                </p>
+              )}
+              {timerOn && (
               <div className="grid grid-cols-3 gap-1.5">
                 {[
                   { sec: 30, label: '30s' },
@@ -479,6 +489,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
                   </button>
                 ))}
               </div>
+              )}
             </div>
           </div>
         </div>

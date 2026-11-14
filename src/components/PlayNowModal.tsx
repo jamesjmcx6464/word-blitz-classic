@@ -489,7 +489,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                     }`}
                   >
                     <Clock className="w-4 h-4" />
-                    <span>⏱️ Timer</span>
+                    <span>Timer on</span>
                   </button>
 
                   <button
@@ -502,7 +502,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                     }`}
                   >
                     <Target className="w-4 h-4" />
-                    <span>🎯 Words Goal</span>
+                    <span>Timer off · words goal</span>
                   </button>
                 </div>
 
@@ -524,6 +524,10 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                     ))}
                   </div>
                 ) : (
+                  <div className="space-y-2">
+                  <p className="text-[11px] sm:text-xs text-slate-400 font-medium">
+                    No timer: a turn ends when the team finds this many words, the pile reaches the line, or you pass the turn from the Scoreboard.
+                  </p>
                   <div className="grid grid-cols-4 gap-2">
                     {[1, 2, 3, 5].map((words) => (
                       <button
@@ -539,6 +543,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                         {words} {words === 1 ? 'word' : 'words'}
                       </button>
                     ))}
+                  </div>
                   </div>
                 )}
               </div>
