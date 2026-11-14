@@ -35,16 +35,7 @@ import { saveHighScore, makeTimeBucketKey } from './utils/highScores';
 import { getSavedDifficulty, saveDifficulty } from './utils/difficulty';
 import { recordSoloPlayerResult } from './utils/registeredPlayers';
 import { detectDevice } from './utils/screenMode';
-import { loadClassroomConfig } from './utils/classroomStorage';
 
-import { FreePlaySettingsModal } from './components/FreePlaySettingsModal';
-import {
-  parseSpellingWords,
-  getSpellingLetterWeights,
-  drawSpellingBagLetter,
-  spellingBag,
-} from './utils/spellingWords';
-import { SpellingListSetup } from './components/SpellingListSetup';
 import { GameHUD } from './components/GameHUD';
 import { WordBar } from './components/WordBar';
 import { GameBoard } from './components/GameBoard';
@@ -53,7 +44,6 @@ import { PauseModal } from './components/PauseModal';
 import { GameOverModal } from './components/GameOverModal';
 import { HighScoresModal, LastSoloResult } from './components/HighScoresModal';
 import { WordHistoryModal } from './components/WordHistoryModal';
-import { ClassroomSetupModal } from './components/ClassroomSetupModal';
 import { TurnTransitionModal } from './components/TurnTransitionModal';
 import { ClassroomVictoryModal } from './components/ClassroomVictoryModal';
 import { ClassroomScoreboardModal } from './components/ClassroomScoreboardModal';
@@ -167,7 +157,14 @@ export default function App() {
     try {
       const saved = localStorage.getItem('word_blitz_free_play_settings');
       if (saved) {
-        return { ...DEFAULT_FREE_PLAY_SETTINGS, ...JSON.parse(saved) };
+        // Drop fields from the retired word list feature (old saves may still have them)
+        const parsed = JSON.parse(saved) as Record<string, unknown>;
+        if (parsed && typeof parsed === 'object') {
+          delete parsed.spellingWordsEnabled;
+          delete parsed.spellingWordsList;
+          delete parsed.wordListName;
+          return { ...DEFAULT_FREE_PLAY_SETTINGS, ...parsed };
+        }
       }
     } catch {
       // ignore
@@ -190,8 +187,6 @@ export default function App() {
   const classroomMatchRef = useRef<ClassroomMatchState | null>(null);
   classroomMatchRef.current = classroomMatch;
 
-  const [isClassroomSetupOpen, setIsClassroomSetupOpen] = useState<boolean>(false);
-  const [teamInitialUseSpelling, setTeamInitialUseSpelling] = useState<boolean>(false);
   const [isClassroomScoreboardOpen, setIsClassroomScoreboardOpen] = useState<boolean>(false);
   const [activeTurnWords, setActiveTurnWords] = useState<WordEntry[]>([]);
   const activeTurnWordsRef = useRef<WordEntry[]>(activeTurnWords);
@@ -221,28 +216,6 @@ export default function App() {
     }
   };
 
-  // Word list chosen on the start screen (applies to Quick Play, Solo and Team)
-  const isWordListActive = () =>
-    freePlaySettingsRef.current.spellingWordsEnabled &&
-    parseSpellingWords(freePlaySettingsRef.current.spellingWordsList).length > 0;
-  const activeWordListName = (): string | undefined =>
-    isWordListActive() ? freePlaySettingsRef.current.wordListName || 'My list' : undefined;
-
-  const handleSelectWordList = (choice: null | 'current' | { name: string; words: string }) => {
-    if (choice === null) {
-      handleUpdateFreePlaySettings({ ...freePlaySettingsRef.current, spellingWordsEnabled: false });
-    } else if (choice === 'current') {
-      handleUpdateFreePlaySettings({ ...freePlaySettingsRef.current, spellingWordsEnabled: true });
-    } else {
-      handleUpdateFreePlaySettings({
-        ...freePlaySettingsRef.current,
-        spellingWordsList: choice.words,
-        wordListName: choice.name,
-        spellingWordsEnabled: true,
-      });
-    }
-  };
-
   const handleChangeDifficulty = (level: DifficultyLevel) => {
     setDifficulty(level);
     difficultyRef.current = level;
@@ -257,61 +230,6 @@ export default function App() {
       speedIncreaseRate: preset.speedIncreaseRate,
     });
   };
-
-  // Settings Modal State
-  const [isFreePlaySettingsOpen, setIsFreePlaySettingsOpen] = useState<boolean>(false);
-  const [isSpellingSetupOpen, setIsSpellingSetupOpen] = useState<boolean>(false);
-  const [pendingFreeStart, setPendingFreeStart] = useState<boolean>(false);
-
-  // Parse spelling words list & calculate exact letter weights
-  const parsedSpellingWords = React.useMemo(() => {
-    return parseSpellingWords(freePlaySettings.spellingWordsList);
-  }, [freePlaySettings.spellingWordsList]);
-
-  const activeWordListLabel =
-    freePlaySettings.spellingWordsEnabled && parsedSpellingWords.length > 0
-      ? `${freePlaySettings.wordListName || 'My list'} (${parsedSpellingWords.length})`
-      : 'All words';
-
-  const parsedSpellingWordsSet = React.useMemo(() => {
-    return new Set(parsedSpellingWords);
-  }, [parsedSpellingWords]);
-
-  const parsedSpellingLetterWeights = React.useMemo(() => {
-    return getSpellingLetterWeights(parsedSpellingWords);
-  }, [parsedSpellingWords]);
-
-  const spellingWordsSetRef = useRef(parsedSpellingWordsSet);
-  spellingWordsSetRef.current = parsedSpellingWordsSet;
-
-  const parsedSpellingWordsRef = useRef(parsedSpellingWords);
-  parsedSpellingWordsRef.current = parsedSpellingWords;
-
-  const spellingLetterWeightsRef = useRef(parsedSpellingLetterWeights);
-  spellingLetterWeightsRef.current = parsedSpellingLetterWeights;
-
-  const startFree = (useSpelling: boolean) => {
-    // End any classroom match when starting solo free play
-    setClassroomMatch(null);
-    classroomMatchRef.current = null;
-
-    if (freePlaySettingsRef.current.spellingWordsEnabled !== useSpelling) {
-      handleUpdateFreePlaySettings({
-        ...freePlaySettingsRef.current,
-        spellingWordsEnabled: useSpelling,
-      });
-      setPendingFreeStart(true);
-    } else {
-      handleStartGame();
-    }
-  };
-
-  useEffect(() => {
-    if (pendingFreeStart) {
-      setPendingFreeStart(false);
-      handleStartGame();
-    }
-  }, [pendingFreeStart, freePlaySettings]);
 
   // Refs for requestAnimationFrame loop
   const animFrameId = useRef<number | null>(null);
@@ -427,10 +345,6 @@ export default function App() {
     const roundSec = activeRoundSecondsRef.current;
     const timeBucket = makeTimeBucketKey('timer', roundSec);
     const mode = activePlayer ? 'solo' : 'quick';
-    const runWordList =
-      freePlaySettingsRef.current.spellingWordsEnabled && parsedSpellingWordsRef.current.length > 0
-        ? freePlaySettingsRef.current.wordListName || 'My list'
-        : undefined;
 
     if (activePlayer) {
       recordSoloPlayerResult(activePlayer.name, activePlayer.logo, scoreRef.current);
@@ -446,7 +360,6 @@ export default function App() {
       totalWords: totalWordsClearedRef.current,
       playerName: activePlayer?.name,
       playerLogo: activePlayer?.logo,
-      wordList: runWordList,
     });
     setGameOverStats({ rank: stats.rank, isNewHighScore: stats.isNewHighScore });
 
@@ -456,7 +369,6 @@ export default function App() {
         entryId: stats.entryId,
         mode: 'solo',
         timeBucket,
-        wordList: runWordList,
         playerName: activePlayer.name,
         playerLogo: activePlayer.logo,
         score: scoreRef.current,
@@ -545,9 +457,6 @@ export default function App() {
             : makeTimeBucketKey('words', cur.config.turnWordsTarget);
         const teamTimeSec =
           cur.config.turnCondition === 'timer' ? cur.config.turnSeconds : undefined;
-        const teamWordList = cur.config.useSpellingList
-          ? freePlaySettingsRef.current.wordListName || 'My list'
-          : undefined;
 
         updatedTeams.forEach((team) => {
           const teamLongest = team.wordsFound.reduce(
@@ -564,7 +473,6 @@ export default function App() {
             totalWords: team.wordsFound.length,
             playerName: team.name,
             playerLogo: team.emoji,
-            wordList: teamWordList,
             allowZeroScore: true,
           });
         });
@@ -614,17 +522,7 @@ export default function App() {
       return;
     }
 
-    // Draw letter: Classroom match with spelling list, or Solo with spelling list, or default letter bag
-    let letter: LetterTileInfo;
-    const isSpellingActive =
-      classroomMatchRef.current?.config.useSpellingList ||
-      (!classroomMatchRef.current && freePlaySettingsRef.current.spellingWordsEnabled);
-
-    if (isSpellingActive && parsedSpellingWords.length > 0) {
-      letter = drawSpellingBagLetter(parsedSpellingWords, frozenTilesRef.current);
-    } else {
-      letter = drawRandomLetter();
-    }
+    const letter: LetterTileInfo = drawRandomLetter();
 
     const newTile: HexTile = {
       id: `tile_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${Math.floor(performance.now() * 100)}`,
@@ -640,7 +538,7 @@ export default function App() {
     const nextList = [...fallingTilesRef.current, newTile];
     fallingTilesRef.current = nextList;
     setFallingTiles(nextList);
-  }, [triggerGameOver, handleCompleteTurn, parsedSpellingWords]);
+  }, [triggerGameOver, handleCompleteTurn]);
 
   // Free Play Round Timer (when timeLimit > 0 and not in classroom mode)
   useEffect(() => {
@@ -722,7 +620,6 @@ export default function App() {
     spawnTimerRef.current = 0;
     lastTimeRef.current = performance.now();
 
-    spellingBag.reset();
     freePlaySpeedRef.current = overrides?.dropSpeed ?? freePlaySettingsRef.current.dropSpeed ?? preset.dropSpeed;
     spawnIntervalRef.current = overrides?.spawnIntervalMs ?? preset.spawnIntervalMs;
     dynamicPaceEnabledRef.current =
@@ -763,9 +660,6 @@ export default function App() {
       tileRadius: preset.tileRadius,
       ceilingHeight: preset.ceilingHeight,
       speedIncreaseRate: preset.speedIncreaseRate,
-      spellingWordsList: freePlaySettingsRef.current.spellingWordsList,
-      wordListName: freePlaySettingsRef.current.wordListName,
-      spellingWordsEnabled: isWordListActive(),
       timeLimit: timeLimitSec,
       speedIncreaseEnabled: true,
     };
@@ -796,7 +690,6 @@ export default function App() {
     playerLogo: string,
     roundSeconds: number
   ) => {
-    const useWordList = isWordListActive();
     const player = { name: playerName, logo: playerLogo };
     setCurrentSoloPlayer(player);
     currentSoloPlayerRef.current = player;
@@ -810,7 +703,6 @@ export default function App() {
       tileRadius: preset.tileRadius,
       ceilingHeight: preset.ceilingHeight,
       speedIncreaseRate: preset.speedIncreaseRate,
-      spellingWordsEnabled: useWordList,
       timeLimit: roundSeconds,
       speedIncreaseEnabled: true,
     };
@@ -825,8 +717,7 @@ export default function App() {
   };
 
   // Classroom: Start Match from Setup
-  const handleStartClassroomMatch = (incoming: ClassroomConfig) => {
-    const config: ClassroomConfig = { ...incoming, useSpellingList: isWordListActive() };
+  const handleStartClassroomMatch = (config: ClassroomConfig) => {
     const preset = DIFFICULTY_PRESETS[difficultyRef.current];
     handleUpdateFreePlaySettings({
       ...freePlaySettingsRef.current,
@@ -850,7 +741,6 @@ export default function App() {
 
     setClassroomMatch(initialState);
     classroomMatchRef.current = initialState;
-    setIsClassroomSetupOpen(false);
     setWordHistory([]);
     setScreen('CLASSROOM_TURN_TRANSITION');
   };
@@ -1041,31 +931,14 @@ export default function App() {
       return;
     }
 
-    // Check if spelling words mode is active (Classroom match or Solo)
-    const isSpellingActive =
-      classroomMatchRef.current?.config.useSpellingList ||
-      (!classroomMatchRef.current && freePlaySettingsRef.current.spellingWordsEnabled);
-
-    if (isSpellingActive) {
-      const spellingSet = spellingWordsSetRef.current;
-      if (!spellingSet.has(wordString.toUpperCase())) {
-        bumpPaceOnWordEnter();
-        soundManager.playWordInvalid();
-        setIsShaking(true);
-        setErrorMessage(`"${wordString}" is not in your spelling list`);
-        setTimeout(() => setIsShaking(false), 400);
-        return;
-      }
-    } else {
-      // Standard dictionary validity check
-      if (!isValidWord(wordString)) {
-        bumpPaceOnWordEnter();
-        soundManager.playWordInvalid();
-        setIsShaking(true);
-        setErrorMessage(`"${wordString}" is not in dictionary`);
-        setTimeout(() => setIsShaking(false), 400);
-        return;
-      }
+    // Standard dictionary validity check
+    if (!isValidWord(wordString)) {
+      bumpPaceOnWordEnter();
+      soundManager.playWordInvalid();
+      setIsShaking(true);
+      setErrorMessage(`"${wordString}" is not in dictionary`);
+      setTimeout(() => setIsShaking(false), 400);
+      return;
     }
 
     // VALID WORD!
@@ -1403,11 +1276,6 @@ export default function App() {
           screenMode={screenMode}
           difficulty={difficulty}
           onChangeDifficulty={handleChangeDifficulty}
-          wordListEnabled={freePlaySettings.spellingWordsEnabled}
-          wordListName={freePlaySettings.wordListName || 'My list'}
-          wordListCount={parsedSpellingWords.length}
-          onSelectWordList={handleSelectWordList}
-          onOpenWordListEditor={() => setIsSpellingSetupOpen(true)}
         />
       )}
 
@@ -1416,7 +1284,6 @@ export default function App() {
         isOpen={isSoloSetupOpen}
         onClose={() => setIsSoloSetupOpen(false)}
         onStartSolo={handleStartNamedSolo}
-        activeWordListLabel={activeWordListLabel}
         isWide={viewMode === 'wide'}
       />
 
@@ -1424,38 +1291,18 @@ export default function App() {
       <PlayNowModal
         isOpen={isTeamSetupOpen}
         onClose={() => setIsTeamSetupOpen(false)}
-        onLaunchSoloAllWords={() => {
+        onLaunchSolo={() => {
           setIsTeamSetupOpen(false);
-          startFree(false);
-        }}
-        onLaunchSoloWordList={() => {
-          setIsTeamSetupOpen(false);
-          startFree(true);
+          handleQuickPlay();
         }}
         onLaunchTeamMatch={(config) => {
           setIsTeamSetupOpen(false);
           handleStartClassroomMatch(config);
         }}
-        useWordList={freePlaySettings.spellingWordsEnabled && parsedSpellingWords.length > 0}
-        activeWordListLabel={activeWordListLabel}
         isWide={viewMode === 'wide'}
         initialStep="team_setup"
         initialMode="team"
       />
-
-      {/* Classroom Setup Modal */}
-      {isClassroomSetupOpen && (
-        <ClassroomSetupModal
-          initialConfig={{
-            ...loadClassroomConfig(),
-            useSpellingList: teamInitialUseSpelling,
-          }}
-          spellingWordsList={freePlaySettings.spellingWordsList}
-          onStartMatch={handleStartClassroomMatch}
-          onClose={() => setIsClassroomSetupOpen(false)}
-          isWide={viewMode === 'wide'}
-        />
-      )}
 
       {/* Classroom Turn Transition Modal */}
       {screen === 'CLASSROOM_TURN_TRANSITION' && classroomMatch && (
@@ -1498,25 +1345,6 @@ export default function App() {
         />
       )}
 
-      {/* Spelling Words Setup Modal */}
-      {isSpellingSetupOpen && (
-        <SpellingListSetup
-          settings={freePlaySettings}
-          onUpdateSettings={handleUpdateFreePlaySettings}
-          onClose={() => {
-            // Done: an emptied list falls back to All words
-            if (parseSpellingWords(freePlaySettingsRef.current.spellingWordsList).length === 0) {
-              handleUpdateFreePlaySettings({
-                ...freePlaySettingsRef.current,
-                spellingWordsEnabled: false,
-              });
-            }
-            setIsSpellingSetupOpen(false);
-          }}
-          isWide={viewMode === 'wide'}
-        />
-      )}
-
       {/* Active Play Viewport (About half-width on PC mode, fits screen on Phone mode) */}
       {(screen === 'PLAYING' || screen === 'PAUSED' || screen === 'GAMEOVER') && (
         <div
@@ -1541,15 +1369,7 @@ export default function App() {
                 ? (freePlaySpeedRef.current / freePlaySettings.dropSpeed) * 100
                 : undefined
             }
-            wordCount={wordHistory.length}
             onOpenWordHistory={() => setIsWordHistoryOpen(true)}
-            isSpellingMode={
-              classroomMatch?.config.useSpellingList ||
-              (!classroomMatch && freePlaySettings.spellingWordsEnabled)
-            }
-            spellingWordsCount={parsedSpellingWords.length}
-            wordEntries={wordHistory}
-            spellingWords={parsedSpellingWords}
             classroomMatch={classroomMatch}
             onOpenScoreboard={() => setIsClassroomScoreboardOpen(true)}
             soloPlayer={currentSoloPlayer}
@@ -1565,12 +1385,6 @@ export default function App() {
             errorMessage={errorMessage}
             isWide={viewMode === 'wide'}
             lastFoundWord={wordHistory[wordHistory.length - 1] ?? null}
-            isSpellingMode={
-              classroomMatch?.config.useSpellingList ||
-              (!classroomMatch && freePlaySettings.spellingWordsEnabled)
-            }
-            spellingWords={parsedSpellingWords}
-            wordEntries={wordHistory}
           />
 
           {/* Continuous Physics Game Board */}
@@ -1650,12 +1464,6 @@ export default function App() {
           onNewGame={handleQuickPlayAgain}
           onBackToMenu={() => setScreen('MENU')}
           reason={gameOverReason}
-          wordEntries={wordHistory}
-          spellingWords={
-            freePlaySettings.spellingWordsEnabled
-              ? parsedSpellingWords
-              : undefined
-          }
         />
       )}
 
@@ -1681,25 +1489,9 @@ export default function App() {
         <WordHistoryModal
           wordEntries={wordHistory}
           onClose={() => setIsWordHistoryOpen(false)}
-          spellingWords={
-            classroomMatch?.config.useSpellingList ||
-            (!classroomMatch && freePlaySettings.spellingWordsEnabled)
-              ? parsedSpellingWords
-              : undefined
-          }
         />
       )}
 
-      {/* Free Play Settings Modal */}
-      {isFreePlaySettingsOpen && (
-        <FreePlaySettingsModal
-          settings={freePlaySettings}
-          onUpdateSettings={handleUpdateFreePlaySettings}
-          onResetSettings={handleResetFreePlaySettings}
-          onClose={() => setIsFreePlaySettingsOpen(false)}
-          isBeforePlay={screen === 'MENU'}
-        />
-      )}
     </main>
   );
 }

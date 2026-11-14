@@ -112,7 +112,6 @@ export const DEFAULT_CLASSROOM_CONFIG: ClassroomConfig = {
   turnSeconds: 30,
   turnWordsTarget: 2,
   totalRounds: 3,
-  useSpellingList: false,
   cleanBoardEachTurn: true,
 };
 
@@ -123,6 +122,8 @@ export function loadClassroomConfig(): ClassroomConfig {
     const raw = localStorage.getItem(STORAGE_KEY_CLASSROOM_CONFIG);
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Retired word list feature: drop the old flag if an earlier save has it
+      if (parsed && typeof parsed === 'object') delete parsed.useSpellingList;
       if (Array.isArray(parsed.teams) && parsed.teams.length >= 2) {
         return {
           ...DEFAULT_CLASSROOM_CONFIG,

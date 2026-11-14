@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Pause,
   Volume2,
@@ -10,8 +10,7 @@ import {
   Star,
   Users,
 } from 'lucide-react';
-import { ViewMode, WordEntry, ClassroomMatchState } from '../types/game';
-import { getSpellingProgress } from '../utils/spellingProgress';
+import { ViewMode, ClassroomMatchState } from '../types/game';
 import gsap from 'gsap';
 
 interface GameHUDProps {
@@ -23,12 +22,7 @@ interface GameHUDProps {
   viewMode: ViewMode;
   timeLeftSec?: number | null;
   freePlaySpeedPct?: number;
-  wordCount?: number;
   onOpenWordHistory?: () => void;
-  isSpellingMode?: boolean;
-  spellingWordsCount?: number;
-  wordEntries?: WordEntry[];
-  spellingWords?: string[];
   // Classroom Team mode props
   classroomMatch?: ClassroomMatchState | null;
   onOpenScoreboard?: () => void;
@@ -100,29 +94,12 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   viewMode,
   timeLeftSec,
   freePlaySpeedPct,
-  wordCount = 0,
   onOpenWordHistory,
-  isSpellingMode = false,
-  spellingWordsCount = 0,
-  wordEntries = [],
-  spellingWords = [],
   classroomMatch,
   onOpenScoreboard,
   soloPlayer,
 }) => {
   const isWide = viewMode === 'wide';
-
-  // Compute live spelling progress
-  const progress = useMemo(() => {
-    if (spellingWords && spellingWords.length > 0) {
-      return getSpellingProgress(wordEntries, spellingWords);
-    }
-    return {
-      foundCount: wordCount,
-      totalCount: spellingWordsCount || 0,
-      allFound: (spellingWordsCount || 0) > 0 && wordCount >= (spellingWordsCount || 0),
-    };
-  }, [wordEntries, spellingWords, wordCount, spellingWordsCount]);
 
   // If in Classroom Team Mode:
   if (classroomMatch) {
@@ -295,31 +272,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               }`}
             >
               {Math.floor(timeLeftSec / 60)}:{(timeLeftSec % 60).toString().padStart(2, '0')}
-            </div>
-          </div>
-        )}
-
-        {/* Spelling Mode Progress */}
-        {isSpellingMode && (
-          <div className="pl-3 border-l border-slate-800 min-w-[110px]">
-            <div className="text-sm font-bold text-teal-400 flex items-center gap-1">
-              <Target className="w-4 h-4" />
-              <span>
-                {progress.foundCount} of {progress.totalCount} words
-              </span>
-            </div>
-            {/* Thin progress bar */}
-            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-1">
-              <div
-                className="h-full bg-teal-400 transition-all duration-300"
-                style={{
-                  width: `${
-                    progress.totalCount > 0
-                      ? Math.min(100, (progress.foundCount / progress.totalCount) * 100)
-                      : 0
-                  }%`,
-                }}
-              />
             </div>
           </div>
         )}

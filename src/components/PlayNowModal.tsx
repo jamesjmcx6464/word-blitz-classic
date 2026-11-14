@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   User,
   Users,
-  BookOpen,
   Sparkles,
   ArrowRight,
   ArrowLeft,
@@ -29,33 +28,26 @@ import {
 interface PlayNowModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLaunchSoloAllWords: () => void;
-  onLaunchSoloWordList: () => void;
+  onLaunchSolo: () => void;
   onLaunchTeamMatch: (config: ClassroomConfig) => void;
-  /** Word list chosen on the start screen; Team just shows it */
-  useWordList: boolean;
-  activeWordListLabel: string;
   isWide: boolean;
-  initialStep?: 'mode' | 'team_setup' | 'words';
+  initialStep?: 'mode' | 'team_setup';
   initialMode?: 'solo' | 'team';
 }
 
 export const PlayNowModal: React.FC<PlayNowModalProps> = ({
   isOpen,
   onClose,
-  onLaunchSoloAllWords,
-  onLaunchSoloWordList,
+  onLaunchSolo,
   onLaunchTeamMatch,
-  useWordList,
-  activeWordListLabel,
   isWide,
   initialStep = 'team_setup',
   initialMode = 'team',
 }) => {
   // Step navigation:
-  // For Solo: 'mode' -> 'words'
-  // For Team: 'mode' -> 'team_setup' -> 'words'
-  const [step, setStep] = useState<'mode' | 'team_setup' | 'words'>(initialStep);
+  // For Solo: 'mode' -> start
+  // For Team: 'mode' -> 'team_setup'
+  const [step, setStep] = useState<'mode' | 'team_setup'>(initialStep);
   const [selectedMode, setSelectedMode] = useState<'solo' | 'team'>(initialMode);
 
   React.useEffect(() => {
@@ -79,11 +71,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
 
   const handleSelectSolo = () => {
     setSelectedMode('solo');
-    if (useWordList) {
-      onLaunchSoloWordList();
-    } else {
-      onLaunchSoloAllWords();
-    }
+    onLaunchSolo();
   };
 
   const handleSelectTeam = () => {
@@ -96,7 +84,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
       onClose();
       return;
     }
-    if (step === 'team_setup' || step === 'words') {
+    if (step === 'team_setup') {
       setStep('mode');
     }
   };
@@ -120,7 +108,6 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
         turnWordsTarget,
         totalRounds,
         cleanBoardEachTurn,
-        useSpellingList: useWordList,
       };
       saveClassroomConfig(finalConfig);
       onLaunchTeamMatch(finalConfig);
@@ -274,12 +261,6 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                     <span>Teams</span>
                   </>
                 )}
-                {step === 'words' && (
-                  <>
-                    <span>›</span>
-                    <span>Words</span>
-                  </>
-                )}
               </div>
               <h2 className="text-xl sm:text-2xl font-display font-black text-white leading-tight">
                 {step === 'mode' && 'Play Now'}
@@ -326,7 +307,7 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                   </div>
 
                   <div className="flex items-center justify-between text-xs font-bold text-amber-400 pt-3 border-t border-slate-700/60 mt-4">
-                    <span>Start: {activeWordListLabel}</span>
+                    <span>Start</span>
                     <span className="text-base group-hover:translate-x-1 transition-transform">➔</span>
                   </div>
                 </button>
@@ -601,14 +582,6 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                     {cleanBoardEachTurn ? 'ON' : 'OFF'}
                   </span>
                 </button>
-              </div>
-
-              {/* Word list (chosen on the start screen) */}
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/60 border border-slate-700/80 text-xs sm:text-sm">
-                <BookOpen className="w-4 h-4 text-teal-400 shrink-0" />
-                <span className="text-slate-400 font-medium">Word list:</span>
-                <strong className="text-white truncate">{activeWordListLabel}</strong>
-                <span className="ml-auto text-[11px] text-slate-500 shrink-0">change on Home</span>
               </div>
 
               {/* Start Button */}

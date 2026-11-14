@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { HexTile, WordEntry } from '../types/game';
 import { getWordScore } from '../data/dictionary';
-import { getSpellingProgress } from '../utils/spellingProgress';
 import { Check, RotateCcw, Delete } from 'lucide-react';
 
 interface WordBarProps {
@@ -13,9 +12,6 @@ interface WordBarProps {
   errorMessage: string | null;
   isWide?: boolean;
   lastFoundWord?: WordEntry | null;
-  isSpellingMode?: boolean;
-  spellingWords?: string[];
-  wordEntries?: WordEntry[];
 }
 
 const PRAISES = [
@@ -35,9 +31,6 @@ export const WordBar: React.FC<WordBarProps> = ({
   errorMessage,
   isWide = false,
   lastFoundWord = null,
-  isSpellingMode = false,
-  spellingWords = [],
-  wordEntries = [],
 }) => {
   const wordString = selectedTiles.map((t) => t.letter.value).join('');
   const letterCount = wordString.length;
@@ -61,20 +54,11 @@ export const WordBar: React.FC<WordBarProps> = ({
     if (lastFoundWord && lastFoundWord.id !== lastFoundWordIdRef.current) {
       lastFoundWordIdRef.current = lastFoundWord.id;
 
-      if (isSpellingMode && spellingWords.length > 0) {
-        const progress = getSpellingProgress(wordEntries, spellingWords);
-        if (progress.allFound) {
-          setSuccessMessage('You found every word! 🎉');
-        } else {
-          setSuccessMessage(`You found ${lastFoundWord.word}! ${progress.foundCount} of ${progress.totalCount} words`);
-        }
+      if (lastFoundWord.length >= 5) {
+        setSuccessMessage('Wow, a long word!');
       } else {
-        if (lastFoundWord.length >= 5) {
-          setSuccessMessage('Wow, a long word!');
-        } else {
-          const randomPraise = PRAISES[Math.floor(Math.random() * PRAISES.length)];
-          setSuccessMessage(randomPraise);
-        }
+        const randomPraise = PRAISES[Math.floor(Math.random() * PRAISES.length)];
+        setSuccessMessage(randomPraise);
       }
 
       const timer = setTimeout(() => {
@@ -83,7 +67,7 @@ export const WordBar: React.FC<WordBarProps> = ({
 
       return () => clearTimeout(timer);
     }
-  }, [lastFoundWord, isSpellingMode, spellingWords, wordEntries]);
+  }, [lastFoundWord]);
 
   // Dynamic scale calculation for long words, bounded at >= 0.6
   const containerRef = useRef<HTMLDivElement>(null);

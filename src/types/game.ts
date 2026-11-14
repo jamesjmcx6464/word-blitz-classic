@@ -57,9 +57,6 @@ export interface FreePlaySettings {
   speedIncreaseRate: number; // percentage speed bump per valid word (default 10%)
   wallWidthPct: number; // width percentage (default 100%, range 50% - 100%)
   ceilingHeight: number; // ceiling danger line Y coordinate (default 85, range 40 - 220)
-  spellingWordsEnabled: boolean; // whether spelling words mode is active
-  spellingWordsList: string; // text list of words entered by player/teacher/parent
-  wordListName: string; // display name of the active word list (leaderboard section label)
 }
 
 export type DifficultyLevel = 'beginner' | 'easy' | 'normal' | 'hard' | 'nightmare';
@@ -163,9 +160,6 @@ export const DEFAULT_FREE_PLAY_SETTINGS: FreePlaySettings = {
   speedIncreaseRate: 5,
   wallWidthPct: 100,
   ceilingHeight: 60,
-  spellingWordsEnabled: false,
-  spellingWordsList: 'CAT, DOG, BIRD, FISH, TREE, BOOK, STAR, PLAY',
-  wordListName: 'My list',
 };
 
 // Classroom / Team Mode Types
@@ -190,7 +184,6 @@ export interface ClassroomConfig {
   turnSeconds: number; // e.g. 30, 45, 60, 90
   turnWordsTarget: number; // e.g. 1, 2, 3, 5
   totalRounds: number; // 0 = endless / teacher controls, or 1, 2, 3, 4, 5 rounds
-  useSpellingList: boolean;
   cleanBoardEachTurn: boolean;
 }
 

@@ -1,13 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { X, BookOpen, Star, Flame, Hash, Check } from 'lucide-react';
+import { X, BookOpen, Star, Flame, Hash } from 'lucide-react';
 import { WordEntry } from '../types/game';
-import { getSpellingProgress } from '../utils/spellingProgress';
-import { getUiPrefs } from '../utils/savedSpellingLists';
 
 interface WordHistoryModalProps {
   wordEntries: WordEntry[];
   onClose: () => void;
-  spellingWords?: string[];
 }
 
 type SortOption = 'recent' | 'score' | 'length' | 'alpha';
@@ -15,16 +12,8 @@ type SortOption = 'recent' | 'score' | 'length' | 'alpha';
 export const WordHistoryModal: React.FC<WordHistoryModalProps> = ({
   wordEntries,
   onClose,
-  spellingWords,
 }) => {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
-  const uiPrefs = useMemo(() => getUiPrefs(), []);
-
-  // Compute spelling progress checklist if spellingWords provided
-  const spellingProgress = useMemo(() => {
-    if (!spellingWords || spellingWords.length === 0) return null;
-    return getSpellingProgress(wordEntries, spellingWords);
-  }, [wordEntries, spellingWords]);
 
   const totalPoints = useMemo(
     () => wordEntries.reduce((sum, entry) => sum + entry.score, 0),
@@ -102,51 +91,6 @@ export const WordHistoryModal: React.FC<WordHistoryModalProps> = ({
 
         {/* Scrollable Modal Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-left">
-          {/* SPELLING CHECKLIST SECTION */}
-          {spellingProgress && spellingWords && (
-            <div className="bg-teal-50 border-2 border-teal-300 rounded-2xl p-4 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="font-display font-black text-base text-teal-950">
-                  Spelling checklist: {spellingProgress.foundCount} of {spellingProgress.totalCount}
-                </span>
-                {spellingProgress.allFound && (
-                  <span className="text-sm font-black text-emerald-800 bg-emerald-200 px-2 py-0.5 rounded-full">
-                    All found! 🎉
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {spellingWords.map((word) => {
-                  const upper = word.toUpperCase();
-                  const isFound = spellingProgress.foundWords.includes(upper);
-
-                  let displayText = upper;
-                  if (!isFound && !uiPrefs.showSpellingList) {
-                    displayText = upper
-                      .split('')
-                      .map(() => '_')
-                      .join(' ');
-                  }
-
-                  return (
-                    <span
-                      key={word}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold font-mono transition-all ${
-                        isFound
-                          ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950'
-                          : 'bg-white border-2 border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      {isFound && <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />}
-                      <span>{displayText}</span>
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {/* QUICK STATS CARDS */}
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3">
