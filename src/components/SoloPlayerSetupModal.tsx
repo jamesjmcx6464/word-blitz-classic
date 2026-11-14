@@ -18,6 +18,8 @@ import {
   getClaimedLogos,
   RegisteredPlayer,
 } from '../utils/registeredPlayers';
+import { DifficultyChoice } from '../types/game';
+import { DifficultyPicker } from './DifficultyPicker';
 
 interface SoloPlayerSetupModalProps {
   isOpen: boolean;
@@ -27,6 +29,10 @@ interface SoloPlayerSetupModalProps {
     playerLogo: string,
     roundSeconds: number
   ) => void;
+  /** Difficulty shared with Home (presets + Custom when Settings are saved) */
+  difficulty: DifficultyChoice;
+  onChangeDifficulty: (level: DifficultyChoice) => void;
+  hasCustomSettings: boolean;
   isWide: boolean;
 }
 
@@ -34,6 +40,9 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
   isOpen,
   onClose,
   onStartSolo,
+  difficulty,
+  onChangeDifficulty,
+  hasCustomSettings,
   isWide,
 }) => {
   const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>([]);
@@ -433,7 +442,16 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
             </>
           )}
 
-          {/* 3. Round Timer */}
+          {/* 3. Difficulty */}
+          <div className="pt-2 border-t border-slate-800">
+            <DifficultyPicker
+              difficulty={difficulty}
+              onChange={onChangeDifficulty}
+              hasCustom={hasCustomSettings}
+            />
+          </div>
+
+          {/* 4. Round Timer */}
           <div className="pt-2 border-t border-slate-800">
             {/* Timer */}
             <div className="space-y-1.5">

@@ -16,7 +16,8 @@ import {
   RotateCcw,
   Palette,
 } from 'lucide-react';
-import { ClassroomConfig, ClassroomTeam, TurnConditionType } from '../types/game';
+import { ClassroomConfig, ClassroomTeam, TurnConditionType, DifficultyChoice } from '../types/game';
+import { DifficultyPicker } from './DifficultyPicker';
 import {
   TEAM_COLOR_PALETTES,
   TEAM_NAME_PRESETS,
@@ -30,6 +31,10 @@ interface PlayNowModalProps {
   onClose: () => void;
   onLaunchSolo: () => void;
   onLaunchTeamMatch: (config: ClassroomConfig) => void;
+  /** Difficulty shared with Home (presets + Custom when Settings are saved) */
+  difficulty: DifficultyChoice;
+  onChangeDifficulty: (level: DifficultyChoice) => void;
+  hasCustomSettings: boolean;
   isWide: boolean;
   initialStep?: 'mode' | 'team_setup';
   initialMode?: 'solo' | 'team';
@@ -40,6 +45,9 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
   onClose,
   onLaunchSolo,
   onLaunchTeamMatch,
+  difficulty,
+  onChangeDifficulty,
+  hasCustomSettings,
   isWide,
   initialStep = 'team_setup',
   initialMode = 'team',
@@ -583,6 +591,13 @@ export const PlayNowModal: React.FC<PlayNowModalProps> = ({
                   </span>
                 </button>
               </div>
+
+              {/* Difficulty (shared with Home) */}
+              <DifficultyPicker
+                difficulty={difficulty}
+                onChange={onChangeDifficulty}
+                hasCustom={hasCustomSettings}
+              />
 
               {/* Start Button */}
               <div className="pt-2">

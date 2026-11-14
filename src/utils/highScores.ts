@@ -1,11 +1,11 @@
-import { DifficultyLevel, LeaderboardMode } from '../types/game';
+import { DifficultyChoice, LeaderboardMode } from '../types/game';
 
 export interface HighScoreEntry {
   id: string;
   mode: LeaderboardMode;
   timeBucket: string; // e.g. 'time:60', 'time:30', 'time:120', 'time:0', 'words:3'
   timeSeconds?: number;
-  difficulty?: DifficultyLevel;
+  difficulty?: DifficultyChoice; // 'custom' = played with the player's saved Settings
   playerName?: string;
   playerLogo?: string;
   score: number;
@@ -141,7 +141,8 @@ function migrateEntry(raw: Record<string, unknown>): {
       raw.difficulty === 'easy' ||
       raw.difficulty === 'normal' ||
       raw.difficulty === 'hard' ||
-      raw.difficulty === 'nightmare'
+      raw.difficulty === 'nightmare' ||
+      raw.difficulty === 'custom'
         ? raw.difficulty
         : undefined,
     playerName,
@@ -231,7 +232,7 @@ export interface SaveHighScoreParams {
   mode: LeaderboardMode;
   timeBucket: string;
   timeSeconds?: number;
-  difficulty?: DifficultyLevel;
+  difficulty?: DifficultyChoice; // 'custom' = played with the player's saved Settings
   score: number;
   longestWord: string;
   totalWords: number;

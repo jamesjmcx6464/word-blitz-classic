@@ -12,8 +12,8 @@ import {
   WordEntry,
   FreePlaySettings,
   DEFAULT_FREE_PLAY_SETTINGS,
-  DifficultyLevel,
-  DIFFICULTY_PRESETS,
+  DifficultyChoice,
+  DifficultyConfig,
   ScreenModeType,
   ClassroomConfig,
   ClassroomMatchState,
@@ -32,7 +32,14 @@ import { drawRandomLetter, LetterTileInfo } from './utils/letterBag';
 import { isValidWord, getWordScore } from './data/dictionary';
 import { soundManager } from './utils/audio';
 import { saveHighScore, makeTimeBucketKey } from './utils/highScores';
-import { getSavedDifficulty, saveDifficulty } from './utils/difficulty';
+import { getSavedDifficulty, saveDifficulty, getDifficultyConfig } from './utils/difficulty';
+import {
+  CustomGameSettings,
+  loadCustomSettings,
+  saveCustomSettings,
+  clearCustomSettings,
+} from './utils/customSettings';
+import { SettingsModal } from './components/SettingsModal';
 import { recordSoloPlayerResult } from './utils/registeredPlayers';
 import { detectDevice } from './utils/screenMode';
 
@@ -71,16 +78,39 @@ export default function App() {
   const [isTeamSetupOpen, setIsTeamSetupOpen] = useState<boolean>(false);
 
   // Selected Difficulty (Easy, Normal, Hard, Nightmare) persisted across sessions
-  const [difficulty, setDifficulty] = useState<DifficultyLevel>(() => getSavedDifficulty());
-  const difficultyRef = useRef<DifficultyLevel>(difficulty);
+  const [difficulty, setDifficulty] = useState<DifficultyChoice>(() => getSavedDifficulty());
+  const difficultyRef = useRef<DifficultyChoice>(difficulty);
   difficultyRef.current = difficulty;
 
+  // Player's own gameplay settings (Home > Settings); enables the 'Custom' difficulty when saved
+  const [customSettings, setCustomSettings] = useState<CustomGameSettings | null>(() =>
+    loadCustomSettings()
+  );
+  const customSettingsRef = useRef<CustomGameSettings | null>(customSettings);
+  customSettingsRef.current = customSettings;
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  /** Full gameplay config for a difficulty choice (presets or saved Custom settings). */
+  const configFor = (choice: DifficultyChoice): DifficultyConfig =>
+    getDifficultyConfig(choice, customSettingsRef.current);
+
+  /** Settings fields every run takes from its difficulty config. */
+  const settingsFromConfig = (c: DifficultyConfig) => ({
+    dropSpeed: c.dropSpeed,
+    tileRadius: c.tileRadius,
+    ceilingHeight: c.ceilingHeight,
+    speedIncreaseRate: c.speedIncreaseRate,
+    wallWidthPct: c.wallWidthPct,
+  });
+
   // Dynamic spawn interval tempo & dynamic pace flag (accelerates on word enter)
-  const spawnIntervalRef = useRef<number>(DIFFICULTY_PRESETS[difficulty].spawnIntervalMs);
+  const spawnIntervalRef = useRef<number>(
+    getDifficultyConfig(difficulty, customSettings).spawnIntervalMs
+  );
   const dynamicPaceEnabledRef = useRef<boolean>(true);
   const activeRoundSecondsRef = useRef<number>(60);
   const lastQuickPlayConfigRef = useRef<{
-    difficulty: DifficultyLevel;
+    difficulty: DifficultyChoice;
     timeLimit: number;
   }>({ difficulty, timeLimit: 120 });
 
@@ -216,19 +246,35 @@ export default function App() {
     }
   };
 
-  const handleChangeDifficulty = (level: DifficultyLevel) => {
+  const handleChangeDifficulty = (level: DifficultyChoice) => {
     setDifficulty(level);
     difficultyRef.current = level;
     saveDifficulty(level);
-    const preset = DIFFICULTY_PRESETS[level];
+    const preset = configFor(level);
     spawnIntervalRef.current = preset.spawnIntervalMs;
     handleUpdateFreePlaySettings({
       ...freePlaySettingsRef.current,
-      dropSpeed: preset.dropSpeed,
-      tileRadius: preset.tileRadius,
-      ceilingHeight: preset.ceilingHeight,
-      speedIncreaseRate: preset.speedIncreaseRate,
+      ...settingsFromConfig(preset),
     });
+  };
+
+  // Settings screen: save custom settings and switch to the Custom difficulty
+  const handleSaveCustomSettings = (next: CustomGameSettings) => {
+    saveCustomSettings(next);
+    setCustomSettings(next);
+    customSettingsRef.current = next;
+    handleChangeDifficulty('custom');
+    setIsSettingsOpen(false);
+  };
+
+  // Settings screen: forget custom settings (Custom option disappears)
+  const handleResetCustomSettings = () => {
+    clearCustomSettings();
+    setCustomSettings(null);
+    customSettingsRef.current = null;
+    if (difficultyRef.current === 'custom') {
+      handleChangeDifficulty('normal');
+    }
   };
 
   // Refs for requestAnimationFrame loop
@@ -522,7 +568,7 @@ export default function App() {
       return;
     }
 
-    const letter: LetterTileInfo = drawRandomLetter();
+    const letter: LetterTileInfo = drawRandomLetter(configFor(difficultyRef.current).letterMods);
 
     const newTile: HexTile = {
       id: `tile_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${Math.floor(performance.now() * 100)}`,
@@ -600,7 +646,7 @@ export default function App() {
     setClassroomMatch(null);
     classroomMatchRef.current = null;
 
-    const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+    const preset = configFor(difficultyRef.current);
 
     setScore(0);
     scoreRef.current = 0;
@@ -643,12 +689,12 @@ export default function App() {
   };
 
   // Start Quick Play using a specific DifficultyLevel & timeLimit
-  const launchQuickPlayWithConfig = (diffLevel: DifficultyLevel, timeLimitSec: number) => {
+  const launchQuickPlayWithConfig = (diffLevel: DifficultyChoice, timeLimitSec: number) => {
     setCurrentSoloPlayer(null);
     currentSoloPlayerRef.current = null;
     setLastSoloResult(null);
 
-    const preset = DIFFICULTY_PRESETS[diffLevel];
+    const preset = configFor(diffLevel);
     lastQuickPlayConfigRef.current = {
       difficulty: diffLevel,
       timeLimit: timeLimitSec,
@@ -656,12 +702,9 @@ export default function App() {
 
     const quickSettings: FreePlaySettings = {
       ...DEFAULT_FREE_PLAY_SETTINGS,
-      dropSpeed: preset.dropSpeed,
-      tileRadius: preset.tileRadius,
-      ceilingHeight: preset.ceilingHeight,
-      speedIncreaseRate: preset.speedIncreaseRate,
+      ...settingsFromConfig(preset),
       timeLimit: timeLimitSec,
-      speedIncreaseEnabled: true,
+      speedIncreaseEnabled: preset.paceEnabled,
     };
     handleUpdateFreePlaySettings(quickSettings);
 
@@ -669,7 +712,7 @@ export default function App() {
       timeLimit: timeLimitSec,
       dropSpeed: preset.dropSpeed,
       spawnIntervalMs: preset.spawnIntervalMs,
-      dynamicPace: true,
+      dynamicPace: preset.paceEnabled,
     });
   };
 
@@ -696,15 +739,12 @@ export default function App() {
     setLastSoloResult(null);
     setIsSoloSetupOpen(false);
 
-    const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+    const preset = configFor(difficultyRef.current);
     const soloSettings: FreePlaySettings = {
       ...freePlaySettingsRef.current,
-      dropSpeed: preset.dropSpeed,
-      tileRadius: preset.tileRadius,
-      ceilingHeight: preset.ceilingHeight,
-      speedIncreaseRate: preset.speedIncreaseRate,
+      ...settingsFromConfig(preset),
       timeLimit: roundSeconds,
-      speedIncreaseEnabled: true,
+      speedIncreaseEnabled: preset.paceEnabled,
     };
     handleUpdateFreePlaySettings(soloSettings);
 
@@ -712,19 +752,16 @@ export default function App() {
       timeLimit: roundSeconds,
       dropSpeed: preset.dropSpeed,
       spawnIntervalMs: preset.spawnIntervalMs,
-      dynamicPace: true,
+      dynamicPace: preset.paceEnabled,
     });
   };
 
   // Classroom: Start Match from Setup
   const handleStartClassroomMatch = (config: ClassroomConfig) => {
-    const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+    const preset = configFor(difficultyRef.current);
     handleUpdateFreePlaySettings({
       ...freePlaySettingsRef.current,
-      dropSpeed: preset.dropSpeed,
-      tileRadius: preset.tileRadius,
-      ceilingHeight: preset.ceilingHeight,
-      speedIncreaseRate: preset.speedIncreaseRate,
+      ...settingsFromConfig(preset),
     });
     spawnIntervalRef.current = preset.spawnIntervalMs;
 
@@ -750,7 +787,7 @@ export default function App() {
     if (!classroomMatchRef.current) return;
     const cur = classroomMatchRef.current;
     const activeTeam = cur.config.teams[cur.currentTeamIndex];
-    const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+    const preset = configFor(difficultyRef.current);
     spawnIntervalRef.current = preset.spawnIntervalMs;
     freePlaySpeedRef.current = preset.dropSpeed;
 
@@ -896,7 +933,7 @@ export default function App() {
       !classroomMatchRef.current &&
       (dynamicPaceEnabledRef.current || freePlaySettingsRef.current.speedIncreaseEnabled)
     ) {
-      const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+      const preset = configFor(difficultyRef.current);
       const baseSpeed = freePlaySettingsRef.current.dropSpeed || preset.dropSpeed;
       const bump = 1 + (freePlaySettingsRef.current.speedIncreaseRate || preset.speedIncreaseRate) / 100;
       freePlaySpeedRef.current = Math.min(
@@ -1220,11 +1257,10 @@ export default function App() {
       // 3. Rain-like spawn cadence. No hard cap: the interval is derived so that,
       // on average, TARGET_ON_SCREEN tiles are falling at once (phone baseline,
       // scaled up for wider boards). Word-enter acceleration shortens it further.
-      const preset = DIFFICULTY_PRESETS[difficultyRef.current];
-      const PHONE_TARGET: Record<string, number> = { beginner: 2, easy: 2.5, normal: 3, hard: 4, nightmare: 5 };
+      const preset = configFor(difficultyRef.current);
       const width = boardWidthRef.current;
       const widthScale = width > 1200 ? 5 / 3 : width > 850 ? 4 / 3 : 1;
-      const targetOnScreen = (PHONE_TARGET[difficultyRef.current] ?? 3) * widthScale;
+      const targetOnScreen = (preset.phoneTargetOnScreen || 3) * widthScale;
       const fallTimeMs = ((effectiveGroundY - SPAWN_Y) / Math.max(1, activeFallSpeed)) * 1000;
       const accelRatio = (spawnIntervalRef.current || preset.spawnIntervalMs) / preset.spawnIntervalMs;
       const meanInterval = Math.max(150, (fallTimeMs / targetOnScreen) * accelRatio);
@@ -1276,6 +1312,8 @@ export default function App() {
           screenMode={screenMode}
           difficulty={difficulty}
           onChangeDifficulty={handleChangeDifficulty}
+          hasCustomSettings={customSettings !== null}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       )}
 
@@ -1284,8 +1322,21 @@ export default function App() {
         isOpen={isSoloSetupOpen}
         onClose={() => setIsSoloSetupOpen(false)}
         onStartSolo={handleStartNamedSolo}
+        difficulty={difficulty}
+        onChangeDifficulty={handleChangeDifficulty}
+        hasCustomSettings={customSettings !== null}
         isWide={viewMode === 'wide'}
       />
+
+      {/* Settings (custom gameplay settings -> Custom difficulty) */}
+      {isSettingsOpen && (
+        <SettingsModal
+          saved={customSettings}
+          onSave={handleSaveCustomSettings}
+          onReset={handleResetCustomSettings}
+          onClose={() => setIsSettingsOpen(false)}
+        />
+      )}
 
       {/* Team Play Organize Teams Modal */}
       <PlayNowModal
@@ -1295,6 +1346,9 @@ export default function App() {
           setIsTeamSetupOpen(false);
           handleQuickPlay();
         }}
+        difficulty={difficulty}
+        onChangeDifficulty={handleChangeDifficulty}
+        hasCustomSettings={customSettings !== null}
         onLaunchTeamMatch={(config) => {
           setIsTeamSetupOpen(false);
           handleStartClassroomMatch(config);
@@ -1423,13 +1477,13 @@ export default function App() {
             classroomMatch
               ? handleStartClassroomTurn
               : () => {
-                  const preset = DIFFICULTY_PRESETS[difficultyRef.current];
+                  const preset = configFor(difficultyRef.current);
                   if (currentSoloPlayer) {
                     handleStartGame({
                       timeLimit: freePlaySettingsRef.current.timeLimit || 60,
                       dropSpeed: preset.dropSpeed,
                       spawnIntervalMs: preset.spawnIntervalMs,
-                      dynamicPace: true,
+                      dynamicPace: preset.paceEnabled,
                     });
                   } else {
                     handleQuickPlayAgain();

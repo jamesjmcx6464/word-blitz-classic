@@ -1,4 +1,4 @@
-import { LetterTileInfo } from '../utils/letterBag';
+import { LetterTileInfo, LetterSpawnModifiers } from '../utils/letterBag';
 
 export interface HexTile {
   id: string;
@@ -61,10 +61,13 @@ export interface FreePlaySettings {
 
 export type DifficultyLevel = 'beginner' | 'easy' | 'normal' | 'hard' | 'nightmare';
 
+/** A built-in preset, or 'custom' = the player's saved Settings. */
+export type DifficultyChoice = DifficultyLevel | 'custom';
+
 export type LeaderboardMode = 'quick' | 'solo' | 'team';
 
 export interface DifficultyConfig {
-  id: DifficultyLevel;
+  id: DifficultyChoice;
   label: string;
   description: string;
   dropSpeed: number; // constant base fall speed (px/sec in reference viewBox)
@@ -76,6 +79,10 @@ export interface DifficultyConfig {
   ceilingHeight: number; // danger line Y coordinate
   tileRadius: number; // hex radius
   maxInFlightOffset: number; // adjustment to max concurrent falling tiles
+  phoneTargetOnScreen: number; // avg tiles falling at once on a phone-width board (scaled up on wider boards)
+  wallWidthPct: number; // play area width percentage
+  paceEnabled: boolean; // whether entering words speeds things up
+  letterMods?: LetterSpawnModifiers; // letter mix tweaks (undefined = standard mix)
 }
 
 export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
@@ -92,6 +99,9 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     ceilingHeight: 45,
     tileRadius: 34,
     maxInFlightOffset: -2,
+    phoneTargetOnScreen: 2,
+    wallWidthPct: 100,
+    paceEnabled: true,
   },
   easy: {
     id: 'easy',
@@ -106,6 +116,9 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     ceilingHeight: 50,
     tileRadius: 32,
     maxInFlightOffset: -1,
+    phoneTargetOnScreen: 2.5,
+    wallWidthPct: 100,
+    paceEnabled: true,
   },
   normal: {
     id: 'normal',
@@ -120,6 +133,9 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     ceilingHeight: 60,
     tileRadius: 31,
     maxInFlightOffset: -1,
+    phoneTargetOnScreen: 3,
+    wallWidthPct: 100,
+    paceEnabled: true,
   },
   hard: {
     id: 'hard',
@@ -134,6 +150,9 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     ceilingHeight: 85,
     tileRadius: 28,
     maxInFlightOffset: 0,
+    phoneTargetOnScreen: 4,
+    wallWidthPct: 100,
+    paceEnabled: true,
   },
   nightmare: {
     id: 'nightmare',
@@ -148,6 +167,9 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     ceilingHeight: 115,
     tileRadius: 26,
     maxInFlightOffset: 1,
+    phoneTargetOnScreen: 5,
+    wallWidthPct: 100,
+    paceEnabled: true,
   },
 };
 

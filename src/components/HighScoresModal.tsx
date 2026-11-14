@@ -401,7 +401,9 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                       </div>
                       <div className="text-[11px] text-slate-400 font-medium truncate">
                         Best: <span className="font-mono font-bold text-slate-300">{entry.longestWord}</span> · {entry.totalWords} words
-                        {entry.difficulty && (
+                        {entry.difficulty === 'custom' ? (
+                          <span className="ml-1.5 font-bold text-fuchsia-300">· Custom settings</span>
+                        ) : entry.difficulty && (
                           <span className="ml-1.5 capitalize text-slate-500">· {entry.difficulty}</span>
                         )}
                       </div>

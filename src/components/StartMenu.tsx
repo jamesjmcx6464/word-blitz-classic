@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Trophy,
   Volume2,
@@ -7,13 +7,11 @@ import {
   User,
   Users,
   Zap,
-  Sparkles,
   ArrowRight,
-  HelpCircle,
-  X,
+  Settings,
 } from 'lucide-react';
-import { ScreenModeType, DifficultyLevel, DIFFICULTY_PRESETS } from '../types/game';
-import { Gauge, Flame } from 'lucide-react';
+import { ScreenModeType, DifficultyChoice, DIFFICULTY_PRESETS } from '../types/game';
+import { DifficultyPicker } from './DifficultyPicker';
 
 interface StartMenuProps {
   onQuickPlay: () => void;
@@ -23,37 +21,12 @@ interface StartMenuProps {
   soundEnabled: boolean;
   onToggleSound: () => void;
   screenMode: ScreenModeType;
-  difficulty: DifficultyLevel;
-  onChangeDifficulty: (level: DifficultyLevel) => void;
+  difficulty: DifficultyChoice;
+  onChangeDifficulty: (level: DifficultyChoice) => void;
+  /** True once the player has saved custom Settings (shows the Custom difficulty). */
+  hasCustomSettings: boolean;
+  onOpenSettings: () => void;
 }
-
-const DIFFICULTY_ORDER: DifficultyLevel[] = ['beginner', 'easy', 'normal', 'hard', 'nightmare'];
-
-const DIFFICULTY_STYLE: Record<
-  DifficultyLevel,
-  { activeClass: string; badgeText: string }
-> = {
-  beginner: {
-    activeClass: 'bg-sky-400 text-slate-950 border-sky-200 shadow-md shadow-sky-400/20',
-    badgeText: 'text-sky-300',
-  },
-  easy: {
-    activeClass: 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-md shadow-emerald-500/20',
-    badgeText: 'text-emerald-300',
-  },
-  normal: {
-    activeClass: 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/20',
-    badgeText: 'text-amber-300',
-  },
-  hard: {
-    activeClass: 'bg-orange-500 text-slate-950 border-orange-300 shadow-md shadow-orange-500/20',
-    badgeText: 'text-orange-300',
-  },
-  nightmare: {
-    activeClass: 'bg-rose-500 text-white border-rose-400 shadow-md shadow-rose-500/25',
-    badgeText: 'text-rose-300',
-  },
-};
 
 export const StartMenu: React.FC<StartMenuProps> = ({
   onQuickPlay,
@@ -65,10 +38,16 @@ export const StartMenu: React.FC<StartMenuProps> = ({
   screenMode,
   difficulty,
   onChangeDifficulty,
+  hasCustomSettings,
+  onOpenSettings,
 }) => {
   const isWide = screenMode === 'pc';
-  const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
-  const activePreset = DIFFICULTY_PRESETS[difficulty];
+  const activeLabel =
+    difficulty === 'custom'
+      ? hasCustomSettings
+        ? 'Custom'
+        : DIFFICULTY_PRESETS.normal.label
+      : DIFFICULTY_PRESETS[difficulty].label;
 
   return (
     <div
@@ -130,6 +109,32 @@ export const StartMenu: React.FC<StartMenuProps> = ({
 
       {/* Main Section */}
       <main className="flex-1 flex flex-col items-center justify-center py-3 sm:py-4 space-y-3">
+        {/* 1. How to play (3-steps strip) */}
+        <div className="w-full bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3 sm:p-3.5 shadow-sm">
+          <span className="text-[11px] font-display font-black text-amber-400 uppercase tracking-widest block mb-2 text-center sm:text-left">
+            How to play
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium text-slate-300">
+            <div className="flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-xl bg-amber-400 text-slate-950 font-black flex items-center justify-center shrink-0">
+                1
+              </span>
+              <span>Tap letters to spell words</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-xl bg-emerald-500 text-slate-950 font-black flex items-center justify-center shrink-0">
+                2
+              </span>
+              <span>Press GO! to pop your word</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-xl bg-rose-400 text-slate-950 font-black flex items-center justify-center shrink-0">
+                3
+              </span>
+              <span>Keep pile below ceiling!</span>
+            </div>
+          </div>
+        </div>
         {/* 2. Quick Play Button */}
         <div className="w-full">
           <button
@@ -146,7 +151,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
                   Quick Play
                 </span>
                 <span className="text-xs sm:text-sm font-extrabold text-slate-900/80 block mt-0.5">
-                  2-Minute Round · {activePreset.label} Mode
+                  2-Minute Round · {activeLabel} Mode
                 </span>
               </div>
             </div>
@@ -203,72 +208,12 @@ export const StartMenu: React.FC<StartMenuProps> = ({
           </button>
         </div>
 
-        {/* 4. Difficulty Menu (Easy, Normal, Hard, Nightmare) */}
-        <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-3.5 shadow-sm space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              {difficulty === 'nightmare' ? (
-                <Flame className="w-4 h-4 text-rose-400" />
-              ) : (
-                <Gauge className="w-4 h-4 text-amber-400" />
-              )}
-              <span className="text-[11px] font-display font-black uppercase tracking-widest text-slate-300">
-                Difficulty
-              </span>
-            </div>
-            <span className={`text-xs font-bold ${DIFFICULTY_STYLE[difficulty].badgeText}`}>
-              {activePreset.description}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-            {DIFFICULTY_ORDER.map((lvl) => {
-              const preset = DIFFICULTY_PRESETS[lvl];
-              const isSelected = difficulty === lvl;
-              return (
-                <button
-                  key={lvl}
-                  type="button"
-                  onClick={() => onChangeDifficulty(lvl)}
-                  className={`min-h-[40px] px-1.5 py-1.5 rounded-xl border-2 font-display font-black text-xs transition-all cursor-pointer active:scale-95 ${
-                    isSelected
-                      ? DIFFICULTY_STYLE[lvl].activeClass
-                      : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-800 hover:border-slate-600'
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 5. 3-steps strip */}
-        <div className="w-full bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3 sm:p-3.5 shadow-sm">
-          <span className="text-[11px] font-display font-black text-amber-400 uppercase tracking-widest block mb-2 text-center sm:text-left">
-            How to play
-          </span>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium text-slate-300">
-            <div className="flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-xl bg-amber-400 text-slate-950 font-black flex items-center justify-center shrink-0">
-                1
-              </span>
-              <span>Tap letters to spell words</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-xl bg-emerald-500 text-slate-950 font-black flex items-center justify-center shrink-0">
-                2
-              </span>
-              <span>Press GO! to pop your word</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-xl bg-rose-400 text-slate-950 font-black flex items-center justify-center shrink-0">
-                3
-              </span>
-              <span>Keep pile below ceiling!</span>
-            </div>
-          </div>
-        </div>
+        {/* 4. Difficulty (presets + Custom once Settings are saved) */}
+        <DifficultyPicker
+          difficulty={difficulty}
+          onChange={onChangeDifficulty}
+          hasCustom={hasCustomSettings}
+        />
       </main>
 
       {/* Footer Row */}
@@ -284,65 +229,13 @@ export const StartMenu: React.FC<StartMenuProps> = ({
 
         <button
           type="button"
-          onClick={() => setShowHowToPlay(true)}
+          onClick={onOpenSettings}
           className="min-h-[44px] px-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 font-bold text-xs sm:text-sm text-slate-200 flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
         >
-          <HelpCircle className="w-4 h-4 text-sky-400" />
-          <span>Rules</span>
+          <Settings className="w-4 h-4 text-fuchsia-400" />
+          <span>Settings</span>
         </button>
       </footer>
-
-      {/* How to Play Dialog */}
-      {showHowToPlay && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-sm bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 shadow-2xl space-y-4 text-left">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display font-black text-xl text-white">
-                How to play Word Blitz
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowHowToPlay(false)}
-                className="min-w-[40px] min-h-[40px] rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer"
-                aria-label="Close rules"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-sm text-slate-300 font-medium">
-              <div className="flex items-start gap-3">
-                <span className="w-7 h-7 rounded-xl bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center shrink-0">
-                  1
-                </span>
-                <p>Tap letters on the board to spell any word you know.</p>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <span className="w-7 h-7 rounded-xl bg-emerald-500 text-slate-950 font-black text-sm flex items-center justify-center shrink-0">
-                  2
-                </span>
-                <p>Press the green <strong className="text-white">GO!</strong> button to score points.</p>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <span className="w-7 h-7 rounded-xl bg-rose-400 text-slate-950 font-black text-sm flex items-center justify-center shrink-0">
-                  3
-                </span>
-                <p>Entering words increases speed! Keep the pile below the ceiling line.</p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowHowToPlay(false)}
-              className="w-full min-h-[50px] rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-black text-base shadow-md cursor-pointer transition-all"
-            >
-              Got it!
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
