@@ -69,7 +69,7 @@ export function getWordScore(length: number, word?: string): number {
   if (length < 2) return 0;
   if (word) {
     const rare = countRareLetters(word);
-    if (rare > 0) return Math.round(Math.pow(2, length) * Math.pow(RARE_LETTER_MULTIPLIER, rare));
+    if (rare > 0) return Math.floor(Math.pow(2, length) * Math.pow(RARE_LETTER_MULTIPLIER, rare));
   }
   // 2^length. Safe (exact) in JS for every real English word (2^53 is the
   // integer limit; the longest dictionary word is far shorter). A 15-letter
