@@ -82,6 +82,7 @@ export interface DifficultyConfig {
   phoneTargetOnScreen: number; // avg tiles falling at once on a phone-width board (scaled up on wider boards)
   wallWidthPct: number; // play area width percentage
   paceEnabled: boolean; // whether entering words speeds things up
+  paceCurve?: 'compound' | 'log'; // 'log' = fast early, flattening rises (default compound)
   letterMods?: LetterSpawnModifiers; // letter mix tweaks (undefined = standard mix)
 }
 
@@ -136,6 +137,7 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     phoneTargetOnScreen: 3,
     wallWidthPct: 100,
     paceEnabled: true,
+    paceCurve: 'log',
   },
   hard: {
     id: 'hard',
@@ -152,7 +154,7 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     maxInFlightOffset: 0,
     phoneTargetOnScreen: 4,
     wallWidthPct: 100,
-    paceEnabled: true,
+    paceEnabled: false,
   },
   nightmare: {
     id: 'nightmare',

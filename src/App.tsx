@@ -108,6 +108,10 @@ export default function App() {
     getDifficultyConfig(difficulty, customSettings).spawnIntervalMs
   );
   const dynamicPaceEnabledRef = useRef<boolean>(true);
+  // Log pace curve: words entered this round and starting values
+  const paceStepsRef = useRef<number>(0);
+  const paceBaseIntervalRef = useRef<number>(0);
+  const paceBaseSpeedRef = useRef<number>(0);
   const activeRoundSecondsRef = useRef<number>(60);
   const lastQuickPlayConfigRef = useRef<{
     difficulty: DifficultyChoice;
@@ -252,6 +256,9 @@ export default function App() {
     saveDifficulty(level);
     const preset = configFor(level);
     spawnIntervalRef.current = preset.spawnIntervalMs;
+    paceStepsRef.current = 0;
+    paceBaseIntervalRef.current = spawnIntervalRef.current;
+    paceBaseSpeedRef.current = 0;
     handleUpdateFreePlaySettings({
       ...freePlaySettingsRef.current,
       ...settingsFromConfig(preset),
@@ -670,6 +677,9 @@ export default function App() {
 
     freePlaySpeedRef.current = overrides?.dropSpeed ?? freePlaySettingsRef.current.dropSpeed ?? preset.dropSpeed;
     spawnIntervalRef.current = overrides?.spawnIntervalMs ?? preset.spawnIntervalMs;
+    paceStepsRef.current = 0;
+    paceBaseIntervalRef.current = spawnIntervalRef.current;
+    paceBaseSpeedRef.current = 0;
     dynamicPaceEnabledRef.current =
       overrides?.dynamicPace ?? freePlaySettingsRef.current.speedIncreaseEnabled;
 
@@ -787,6 +797,9 @@ export default function App() {
       ...settingsFromConfig(preset),
     });
     spawnIntervalRef.current = preset.spawnIntervalMs;
+    paceStepsRef.current = 0;
+    paceBaseIntervalRef.current = spawnIntervalRef.current;
+    paceBaseSpeedRef.current = 0;
 
     const initialState: ClassroomMatchState = {
       config,
@@ -812,6 +825,9 @@ export default function App() {
     const activeTeam = cur.config.teams[cur.currentTeamIndex];
     const preset = configFor(difficultyRef.current);
     spawnIntervalRef.current = preset.spawnIntervalMs;
+    paceStepsRef.current = 0;
+    paceBaseIntervalRef.current = spawnIntervalRef.current;
+    paceBaseSpeedRef.current = 0;
     freePlaySpeedRef.current = preset.dropSpeed;
 
     // Clear board if cleanBoardEachTurn is enabled
@@ -958,6 +974,22 @@ export default function App() {
     ) {
       const preset = configFor(difficultyRef.current);
       const baseSpeed = freePlaySettingsRef.current.dropSpeed || preset.dropSpeed;
+      if (preset.paceCurve === 'log') {
+        // Logarithmic: multiplier = 1 + 0.25 * ln(1 + words entered), capped.
+        if (!paceBaseSpeedRef.current) paceBaseSpeedRef.current = freePlaySpeedRef.current;
+        if (!paceBaseIntervalRef.current) paceBaseIntervalRef.current = spawnIntervalRef.current;
+        paceStepsRef.current += 1;
+        const mult = 1 + 0.25 * Math.log(1 + paceStepsRef.current);
+        freePlaySpeedRef.current = Math.min(
+          paceBaseSpeedRef.current * mult,
+          baseSpeed * preset.maxSpeedMultiplier
+        );
+        spawnIntervalRef.current = Math.max(
+          preset.minSpawnIntervalMs,
+          Math.round(paceBaseIntervalRef.current / mult)
+        );
+        return;
+      }
       const bump = 1 + (freePlaySettingsRef.current.speedIncreaseRate || preset.speedIncreaseRate) / 100;
       freePlaySpeedRef.current = Math.min(
         freePlaySpeedRef.current * bump,
