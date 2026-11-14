@@ -249,6 +249,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
           <span>Settings</span>
         </button>
       </footer>
+      <p className="mt-2 text-center text-[10px] text-slate-500 select-none">Version {__APP_VERSION__}</p>
     </div>
   );
 };
