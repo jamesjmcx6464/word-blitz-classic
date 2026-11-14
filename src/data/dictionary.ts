@@ -30,6 +30,12 @@ const MONTHS = [
 ];
 for (const m of MONTHS) wordSet.add(m);
 
+// Days of the week
+const DAYS = [
+  'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
+];
+for (const d of DAYS) wordSet.add(d);
+
 
 export function isValidWord(word: string): boolean {
   if (!word || word.length < 2) return false;
