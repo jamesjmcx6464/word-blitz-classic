@@ -8,9 +8,11 @@ export interface LetterSpawnModifiers {
   rareLetterWeightMultiplier?: number; // e.g. 0.8
 }
 
+export type LetterWeightTable = Array<{ letter: string; weight: number }>;
+
 // Letter frequencies: Cornell English letter frequency table (40,000-word sample)
 // https://pi.math.cornell.edu/~mec/2003-2004/cryptography/subs/frequencies.html
-const BASE_LETTER_WEIGHTS: Array<{ letter: string; weight: number }> = [
+const BASE_LETTER_WEIGHTS: LetterWeightTable = [
   { letter: 'E', weight: 12.02 },
   { letter: 'T', weight: 9.1 },
   { letter: 'A', weight: 8.12 },
@@ -37,6 +39,70 @@ const BASE_LETTER_WEIGHTS: Array<{ letter: string; weight: number }> = [
   { letter: 'Q', weight: 0.11 },
   { letter: 'J', weight: 0.1 },
   { letter: 'Z', weight: 0.07 },
+];
+
+// Beginner: letter mix from common elementary 2–4 letter words
+// (Dolch pre-primer through 2nd + nouns, Fry first 300, K–2 CVC).
+// Unique words, 3-letter ×1.5, CVC-only ×0.5; Q=0; J/X capped at 0.30;
+// vowels (AEIOU) rescaled to 40%. Y is a consonant. Research notes:
+// /workspace/wordblitz_classic_v2/kid_letter_freq.md
+export const KID_LETTER_WEIGHTS: LetterWeightTable = [
+  { letter: 'E', weight: 11.05 },
+  { letter: 'A', weight: 10.00 },
+  { letter: 'O', weight: 9.07 },
+  { letter: 'T', weight: 7.28 },
+  { letter: 'I', weight: 6.01 },
+  { letter: 'N', weight: 5.59 },
+  { letter: 'S', weight: 4.72 },
+  { letter: 'D', weight: 4.54 },
+  { letter: 'L', weight: 4.29 },
+  { letter: 'R', weight: 4.10 },
+  { letter: 'H', weight: 3.92 },
+  { letter: 'U', weight: 3.87 },
+  { letter: 'M', weight: 3.45 },
+  { letter: 'W', weight: 3.29 },
+  { letter: 'G', weight: 3.20 },
+  { letter: 'B', weight: 3.11 },
+  { letter: 'P', weight: 2.92 },
+  { letter: 'Y', weight: 2.45 },
+  { letter: 'F', weight: 2.29 },
+  { letter: 'C', weight: 2.02 },
+  { letter: 'K', weight: 1.38 },
+  { letter: 'V', weight: 0.76 },
+  { letter: 'J', weight: 0.29 },
+  { letter: 'X', weight: 0.29 },
+  { letter: 'Z', weight: 0.11 },
+  { letter: 'Q', weight: 0.00 },
+];
+
+// Easy: 50/50 blend of the Beginner kid table and Cornell, renormalized.
+export const EASY_LETTER_WEIGHTS: LetterWeightTable = [
+  { letter: 'E', weight: 11.55 },
+  { letter: 'A', weight: 9.06 },
+  { letter: 'O', weight: 8.38 },
+  { letter: 'T', weight: 8.19 },
+  { letter: 'I', weight: 6.66 },
+  { letter: 'N', weight: 6.27 },
+  { letter: 'S', weight: 5.50 },
+  { letter: 'R', weight: 5.06 },
+  { letter: 'H', weight: 4.92 },
+  { letter: 'D', weight: 4.43 },
+  { letter: 'L', weight: 4.13 },
+  { letter: 'U', weight: 3.37 },
+  { letter: 'M', weight: 3.03 },
+  { letter: 'W', weight: 2.69 },
+  { letter: 'G', weight: 2.61 },
+  { letter: 'P', weight: 2.37 },
+  { letter: 'C', weight: 2.36 },
+  { letter: 'B', weight: 2.30 },
+  { letter: 'F', weight: 2.29 },
+  { letter: 'Y', weight: 2.28 },
+  { letter: 'K', weight: 1.04 },
+  { letter: 'V', weight: 0.94 },
+  { letter: 'X', weight: 0.23 },
+  { letter: 'J', weight: 0.19 },
+  { letter: 'Z', weight: 0.09 },
+  { letter: 'Q', weight: 0.06 },
 ];
 
 const BASE_TOTAL_WEIGHT = BASE_LETTER_WEIGHTS.reduce((sum, item) => sum + item.weight, 0);
@@ -88,8 +154,8 @@ export function drawRandomLetter(modifiers?: LetterSpawnModifiers): LetterTileIn
   return { display: chosen, value: chosen };
 }
 
-// Beginner/Easy balance: after 5 vowels in a row force a consonant, after 5 consonants force a vowel.
-// Otherwise the standard Cornell distribution. Y counts as a consonant.
+// Beginner/Easy balance: after N vowels in a row force a consonant, after N consonants force a vowel.
+// Otherwise the provided distribution (kid table, Easy blend, or Cornell). Y counts as a consonant.
 export const BALANCE_STREAK_LIMIT = 5;
 let streakKind: 'vowel' | 'consonant' | null = null;
 let streakCount = 0;
@@ -99,25 +165,29 @@ export function resetLetterStreak(): void {
   streakCount = 0;
 }
 
-function drawFrom(pool: Array<{ letter: string; weight: number }>): string {
-  const total = pool.reduce((sum, item) => sum + item.weight, 0);
+function drawFrom(pool: LetterWeightTable): string {
+  const usable = pool.filter((item) => item.weight > 0);
+  const total = usable.reduce((sum, item) => sum + item.weight, 0);
   const r = Math.random() * total;
   let running = 0;
-  for (const item of pool) {
+  for (const item of usable) {
     running += item.weight;
     if (r <= running) return item.letter;
   }
-  return pool[pool.length - 1].letter;
+  return usable[usable.length - 1].letter;
 }
 
-export function drawBalancedLetter(limit: number = BALANCE_STREAK_LIMIT): LetterTileInfo {
+export function drawBalancedLetter(
+  limit: number = BALANCE_STREAK_LIMIT,
+  table: LetterWeightTable = BASE_LETTER_WEIGHTS,
+): LetterTileInfo {
   let chosen: string;
   if (streakCount >= limit && streakKind === 'vowel') {
-    chosen = drawFrom(BASE_LETTER_WEIGHTS.filter((i) => !VOWELS.has(i.letter)));
+    chosen = drawFrom(table.filter((i) => !VOWELS.has(i.letter)));
   } else if (streakCount >= limit && streakKind === 'consonant') {
-    chosen = drawFrom(BASE_LETTER_WEIGHTS.filter((i) => VOWELS.has(i.letter)));
+    chosen = drawFrom(table.filter((i) => VOWELS.has(i.letter)));
   } else {
-    chosen = drawFrom(BASE_LETTER_WEIGHTS);
+    chosen = drawFrom(table);
   }
   const kind = VOWELS.has(chosen) ? 'vowel' : 'consonant';
   if (kind === streakKind) {
