@@ -16,6 +16,7 @@ import gsap from 'gsap';
 interface GameHUDProps {
   score: number;
   longestWord: string;
+  letterMixLabel?: string;
   onPause: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
@@ -88,6 +89,7 @@ const RollingScore: React.FC<RollingScoreProps> = ({ value, prefix = '', classNa
 export const GameHUD: React.FC<GameHUDProps> = ({
   score,
   longestWord,
+  letterMixLabel,
   onPause,
   soundEnabled,
   onToggleSound,
@@ -290,6 +292,16 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <span className="text-sm text-slate-400 font-medium block">Longest word</span>
             <span className="text-base font-bold font-mono text-slate-200 uppercase">
               {longestWord}
+            </span>
+          </div>
+        )}
+
+        {/* Active letter mix / word bank */}
+        {letterMixLabel && (
+          <div className="pl-3 border-l border-slate-800 hidden sm:block min-w-0">
+            <span className="text-sm text-slate-400 font-medium block">Letters</span>
+            <span className="text-sm font-bold text-sky-200 truncate block max-w-[180px]" title={letterMixLabel}>
+              {letterMixLabel}
             </span>
           </div>
         )}

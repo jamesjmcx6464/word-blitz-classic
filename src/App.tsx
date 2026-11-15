@@ -1494,6 +1494,7 @@ export default function App() {
           <GameHUD
             score={score}
             longestWord={longestWord}
+            letterMixLabel={getLetterMixLabel(letterDist) ?? 'Standard'}
             onPause={() => setScreen('PAUSED')}
             soundEnabled={soundEnabled}
             onToggleSound={handleToggleSound}
