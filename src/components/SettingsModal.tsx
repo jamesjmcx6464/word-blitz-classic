@@ -227,6 +227,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </>
           ) : (
             <>
+              <p className="text-[11px] text-slate-300 font-medium leading-snug px-0.5">
+                Spell group words in a row for a streak bonus (up to 4×). A typo halves it; a word outside the group knocks it down two steps.
+              </p>
               <section>
                 <h3 className="text-sm font-display font-black text-white mb-1">Presets</h3>
                 <p className="text-[11px] text-slate-400 font-medium mb-2.5">

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { HexTile, WordEntry } from '../types/game';
 import { getWordScore } from '../data/dictionary';
+import { applyStreakScore, formatStreakMult, streakStyle } from '../utils/groupStreak';
 import { Check, RotateCcw, Delete } from 'lucide-react';
 
 interface WordBarProps {
@@ -12,6 +13,9 @@ interface WordBarProps {
   errorMessage: string | null;
   isWide?: boolean;
   lastFoundWord?: WordEntry | null;
+  streakActive?: boolean;
+  streakMultiplier?: number;
+  isGroupWord?: boolean;
 }
 
 const PRAISES = [
@@ -31,10 +35,22 @@ export const WordBar: React.FC<WordBarProps> = ({
   errorMessage,
   isWide = false,
   lastFoundWord = null,
+  streakActive = false,
+  streakMultiplier = 1,
+  isGroupWord = false,
 }) => {
   const wordString = selectedTiles.map((t) => t.letter.value).join('');
   const letterCount = wordString.length;
-  const potentialScore = letterCount >= 2 ? getWordScore(letterCount, wordString) : 0;
+  const baseScore = letterCount >= 2 ? getWordScore(letterCount, wordString) : 0;
+  const showStreakPreview = streakActive && isGroupWord && letterCount >= 2;
+  const potentialScore =
+    showStreakPreview && streakMultiplier > 1
+      ? applyStreakScore(baseScore, streakMultiplier)
+      : baseScore;
+  const streakColor = streakStyle(streakMultiplier).fill;
+  const trayBorder = showStreakPreview
+    ? { borderColor: streakColor, boxShadow: `0 0 0 1px ${streakColor}55` }
+    : undefined;
   const isValidLength = letterCount >= 2;
 
   // Track success messages
@@ -182,6 +198,11 @@ export const WordBar: React.FC<WordBarProps> = ({
     return (
       <span className="text-amber-300 text-xs sm:text-sm font-bold truncate max-w-full leading-tight">
         +{potentialScore} points if you press GO!
+        {showStreakPreview && streakMultiplier > 1
+          ? ` · streak x${formatStreakMult(streakMultiplier)}`
+          : showStreakPreview
+            ? ' · group word'
+            : ''}
       </span>
     );
   };
@@ -271,7 +292,8 @@ export const WordBar: React.FC<WordBarProps> = ({
     <div className="w-full mx-auto px-2 mb-1 flex flex-col shrink-0 select-none">
       {isWide ? (
         /* WIDE SCREEN: Strictly fixed h-[88px] overflow-hidden */
-        <div className="h-[88px] overflow-hidden bg-slate-900/90 border-2 border-slate-800 rounded-2xl px-3 py-1 flex items-center justify-between gap-3 shadow-md">
+        <div className="h-[88px] overflow-hidden bg-slate-900/90 border-2 border-slate-800 rounded-2xl px-3 py-1 flex items-center justify-between gap-3 shadow-md transition-colors"
+          style={trayBorder}>
           {/* Left: Fixed height letter strip (54px) & Fixed height status line (22px) */}
           <div className="flex-1 flex flex-col min-w-0 h-full justify-center">
             <div className="h-[54px] w-full flex items-center overflow-hidden">
@@ -306,7 +328,8 @@ export const WordBar: React.FC<WordBarProps> = ({
         /* PHONE: Fixed height h-[84px] Tray, then Fixed height h-[56px] Buttons */
         <div className="flex flex-col gap-1.5">
           {/* Tray Row: strictly h-[84px] overflow-hidden */}
-          <div className="h-[84px] overflow-hidden bg-slate-900/90 border-2 border-slate-800 rounded-2xl px-2 py-1 flex flex-col items-center justify-between text-center shadow-md">
+          <div className="h-[84px] overflow-hidden bg-slate-900/90 border-2 border-slate-800 rounded-2xl px-2 py-1 flex flex-col items-center justify-between text-center shadow-md transition-colors"
+          style={trayBorder}>
             {/* Top Tile Strip: strictly h-[54px] flex items-center justify-center overflow-hidden */}
             <div className="h-[54px] w-full flex items-center justify-center overflow-hidden">
               {selectedTiles.length > 0 ? (

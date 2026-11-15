@@ -19,6 +19,8 @@ export interface FloatingScore {
   points: number;
   x: number;
   y: number;
+  fill?: string;
+  stroke?: string;
 }
 
 export type GameScreen =

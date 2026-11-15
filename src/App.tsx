@@ -35,6 +35,15 @@ import { saveHighScore, makeTimeBucketKey } from './utils/highScores';
 import { getSavedDifficulty, saveDifficulty, getDifficultyConfig } from './utils/difficulty';
 import { computeTimePace } from './utils/timePace';
 import {
+  applyStreakScore,
+  bumpStreak,
+  dropTwoStages,
+  formatStreakMult,
+  halveStreak,
+  isWordInGroup,
+  streakStyle,
+} from './utils/groupStreak';
+import {
   CustomGameSettings,
   loadCustomSettings,
   saveCustomSettings,
@@ -45,6 +54,7 @@ import {
   saveLetterDistribution,
   resolveLetterDraw,
   getLetterMixLabel,
+  isStandardLetterMix,
   LetterDistributionSettings,
 } from './utils/letterDistributions';
 import { SettingsModal } from './components/SettingsModal';
@@ -234,6 +244,40 @@ export default function App() {
   const [classroomMatch, setClassroomMatch] = useState<ClassroomMatchState | null>(null);
   const classroomMatchRef = useRef<ClassroomMatchState | null>(null);
   classroomMatchRef.current = classroomMatch;
+
+  // Group-word streak (Letters presets / sound focus only). Reset each solo game; per team in classroom.
+  const [groupStreak, setGroupStreak] = useState<number>(1);
+  const groupStreakRef = useRef<number>(1);
+  const teamStreaksRef = useRef<number[]>([]);
+  const [streakFlash, setStreakFlash] = useState<'up' | 'down' | null>(null);
+  const streakFlashTimerRef = useRef<number | null>(null);
+
+  const flashStreak = (kind: 'up' | 'down') => {
+    if (streakFlashTimerRef.current) window.clearTimeout(streakFlashTimerRef.current);
+    setStreakFlash(kind);
+    streakFlashTimerRef.current = window.setTimeout(() => {
+      setStreakFlash(null);
+      streakFlashTimerRef.current = null;
+    }, 450);
+  };
+
+  const setStreakValue = (next: number) => {
+    groupStreakRef.current = next;
+    setGroupStreak(next);
+    if (classroomMatchRef.current) {
+      const idx = classroomMatchRef.current.currentTeamIndex;
+      const copy = teamStreaksRef.current.slice();
+      copy[idx] = next;
+      teamStreaksRef.current = copy;
+    }
+  };
+
+  const resetGroupStreak = () => {
+    groupStreakRef.current = 1;
+    setGroupStreak(1);
+    setStreakFlash(null);
+  };
+
 
   const [isClassroomScoreboardOpen, setIsClassroomScoreboardOpen] = useState<boolean>(false);
   const [activeTurnWords, setActiveTurnWords] = useState<WordEntry[]>([]);
@@ -695,6 +739,8 @@ export default function App() {
     spawnTimerRef.current = 0;
     lastTimeRef.current = performance.now();
     resetLetterStreak();
+    resetGroupStreak();
+    teamStreaksRef.current = [];
 
     freePlaySpeedRef.current = overrides?.dropSpeed ?? freePlaySettingsRef.current.dropSpeed ?? preset.dropSpeed;
     spawnIntervalRef.current = overrides?.spawnIntervalMs ?? preset.spawnIntervalMs;
@@ -838,6 +884,8 @@ export default function App() {
     setClassroomMatch(initialState);
     classroomMatchRef.current = initialState;
     setWordHistory([]);
+    resetGroupStreak();
+    teamStreaksRef.current = [];
     setScreen('CLASSROOM_TURN_TRANSITION');
   };
 
@@ -887,6 +935,12 @@ export default function App() {
     isSpawningRef.current = false;
     lastTimeRef.current = performance.now();
     resetLetterStreak();
+    {
+      const saved = teamStreaksRef.current[cur.currentTeamIndex] ?? 1;
+      groupStreakRef.current = saved;
+      setGroupStreak(saved);
+      setStreakFlash(null);
+    }
 
     setScreen('PLAYING');
 
@@ -922,6 +976,8 @@ export default function App() {
     setClassroomMatch(freshMatch);
     classroomMatchRef.current = freshMatch;
     setWordHistory([]);
+    resetGroupStreak();
+    teamStreaksRef.current = [];
     setScreen('CLASSROOM_TURN_TRANSITION');
   };
 
@@ -1048,6 +1104,11 @@ export default function App() {
       setIsShaking(true);
       setErrorMessage('Minimum 2 letters required');
       setTimeout(() => setIsShaking(false), 400);
+      if (!isStandardLetterMix(letterDistRef.current)) {
+        const next = halveStreak(groupStreakRef.current);
+        if (next < groupStreakRef.current) flashStreak('down');
+        setStreakValue(next);
+      }
       return;
     }
 
@@ -1058,13 +1119,34 @@ export default function App() {
       setIsShaking(true);
       setErrorMessage(`"${wordString}" is not in dictionary`);
       setTimeout(() => setIsShaking(false), 400);
+      if (!isStandardLetterMix(letterDistRef.current)) {
+        const next = halveStreak(groupStreakRef.current);
+        if (next < groupStreakRef.current) flashStreak('down');
+        setStreakValue(next);
+      }
       return;
     }
 
     // VALID WORD!
     bumpPaceOnWordEnter();
-    const pointsAwarded = getWordScore(wordString.length, wordString);
-    const popupText = countRareLetters(wordString) > 0 ? `+${pointsAwarded} rare!` : `+${pointsAwarded}`;
+    const baseScore = getWordScore(wordString.length, wordString);
+    const mix = letterDistRef.current;
+    const streakOn = !isStandardLetterMix(mix);
+    let appliedMult = 1;
+    if (streakOn) {
+      const inGroup = isWordInGroup(wordString, mix);
+      appliedMult = groupStreakRef.current;
+      const next = inGroup ? bumpStreak(appliedMult) : dropTwoStages(appliedMult);
+      if (next < appliedMult) flashStreak('down');
+      else if (next > appliedMult) flashStreak('up');
+      setStreakValue(next);
+    }
+    const pointsAwarded = applyStreakScore(baseScore, appliedMult);
+    const rare = countRareLetters(wordString) > 0;
+    let popupText = `+${pointsAwarded}`;
+    if (rare) popupText += ' rare';
+    if (streakOn && appliedMult > 1) popupText += ` streak x${formatStreakMult(appliedMult)}!`;
+    else if (rare) popupText += '!';
 
     // Record in wordHistory
     const newWordEntry: WordEntry = {
@@ -1104,12 +1186,15 @@ export default function App() {
     const avgX = liveSelected.reduce((sum, t) => sum + t.x, 0) / liveSelected.length;
     const avgY = liveSelected.reduce((sum, t) => sum + t.y, 0) / liveSelected.length;
 
+    const streakPaint = streakOn && appliedMult > 1 ? streakStyle(appliedMult) : null;
     const newScorePopup: FloatingScore = {
       id: 'score_' + Date.now(),
       text: popupText,
       points: pointsAwarded,
       x: avgX,
       y: avgY,
+      fill: streakPaint?.fill,
+      stroke: streakPaint?.stroke,
     };
     setFloatingScores((prev) => [...prev, newScorePopup]);
     setTimeout(() => {
@@ -1510,6 +1595,9 @@ export default function App() {
             score={score}
             longestWord={longestWord}
             letterMixLabel={getLetterMixLabel(letterDist) ?? 'Standard'}
+            streakActive={!isStandardLetterMix(letterDist)}
+            streakMultiplier={groupStreak}
+            streakFlash={streakFlash}
             onPause={() => setScreen('PAUSED')}
             soundEnabled={soundEnabled}
             onToggleSound={handleToggleSound}
@@ -1538,6 +1626,12 @@ export default function App() {
             errorMessage={errorMessage}
             isWide={viewMode === 'wide'}
             lastFoundWord={wordHistory[wordHistory.length - 1] ?? null}
+            streakActive={!isStandardLetterMix(letterDist)}
+            streakMultiplier={groupStreak}
+            isGroupWord={
+              selectedTiles.length >= 2 &&
+              isWordInGroup(selectedTiles.map((tile) => tile.letter.value).join(''), letterDist)
+            }
           />
 
           {/* Continuous Physics Game Board */}

@@ -11,12 +11,16 @@ import {
   Users,
 } from 'lucide-react';
 import { ViewMode, ClassroomMatchState } from '../types/game';
+import { StreakGauge } from './StreakGauge';
 import gsap from 'gsap';
 
 interface GameHUDProps {
   score: number;
   longestWord: string;
   letterMixLabel?: string;
+  streakMultiplier?: number;
+  streakActive?: boolean;
+  streakFlash?: 'up' | 'down' | null;
   onPause: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
@@ -90,6 +94,9 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   score,
   longestWord,
   letterMixLabel,
+  streakMultiplier = 1,
+  streakActive = false,
+  streakFlash = null,
   onPause,
   soundEnabled,
   onToggleSound,
@@ -171,6 +178,9 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <span className="hidden min-[520px]:inline px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-mono font-bold text-xs">
               +{classroomMatch.turnScoreGained} turn
             </span>
+          )}
+          {streakActive && (
+            <StreakGauge multiplier={streakMultiplier} flash={streakFlash} />
           )}
         </div>
 
@@ -296,13 +306,20 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           </div>
         )}
 
-        {/* Active letter mix / word bank */}
-        {letterMixLabel && (
-          <div className="pl-3 border-l border-slate-800 hidden sm:block min-w-0">
-            <span className="text-sm text-slate-400 font-medium block">Letters</span>
-            <span className="text-sm font-bold text-sky-200 truncate block max-w-[180px]" title={letterMixLabel}>
-              {letterMixLabel}
-            </span>
+        {/* Letter mix + group streak gauge (gauge stays visible on phones) */}
+        {(streakActive || letterMixLabel) && (
+          <div className="pl-2 sm:pl-3 border-l border-slate-800 flex items-center gap-1.5 sm:gap-2 min-w-0">
+            {streakActive && (
+              <StreakGauge multiplier={streakMultiplier} flash={streakFlash} />
+            )}
+            {letterMixLabel && (
+              <div className="hidden min-[400px]:block min-w-0">
+                <span className="text-[10px] sm:text-sm text-slate-400 font-medium block leading-tight">Letters</span>
+                <span className="text-[11px] sm:text-sm font-bold text-sky-200 truncate block max-w-[90px] sm:max-w-[180px]" title={letterMixLabel}>
+                  {letterMixLabel}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
