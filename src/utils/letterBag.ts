@@ -12,7 +12,7 @@ export type LetterWeightTable = Array<{ letter: string; weight: number }>;
 
 // Letter frequencies: Cornell English letter frequency table (40,000-word sample)
 // https://pi.math.cornell.edu/~mec/2003-2004/cryptography/subs/frequencies.html
-const BASE_LETTER_WEIGHTS: LetterWeightTable = [
+export const CORNELL_LETTER_WEIGHTS: LetterWeightTable = [
   { letter: 'E', weight: 12.02 },
   { letter: 'T', weight: 9.1 },
   { letter: 'A', weight: 8.12 },
@@ -105,7 +105,7 @@ export const EASY_LETTER_WEIGHTS: LetterWeightTable = [
   { letter: 'Q', weight: 0.06 },
 ];
 
-const BASE_TOTAL_WEIGHT = BASE_LETTER_WEIGHTS.reduce((sum, item) => sum + item.weight, 0);
+const BASE_TOTAL_WEIGHT = CORNELL_LETTER_WEIGHTS.reduce((sum, item) => sum + item.weight, 0);
 const VOWELS = new Set(['A', 'E', 'I', 'O', 'U']);
 const RARE_LETTERS = new Set(['Q', 'Z', 'X', 'J']);
 
@@ -115,7 +115,7 @@ const RARE_LETTERS = new Set(['Q', 'Z', 'X', 'J']);
  * In Career Mode, supports Vowel Drip and Rare Letter Filter upgrades.
  */
 export function drawRandomLetter(modifiers?: LetterSpawnModifiers): LetterTileInfo {
-  let weights = BASE_LETTER_WEIGHTS;
+  let weights = CORNELL_LETTER_WEIGHTS;
   let totalWeight = BASE_TOTAL_WEIGHT;
 
   // Apply Career Mode spawn weight adjustments only if modifiers provided and active
@@ -123,7 +123,7 @@ export function drawRandomLetter(modifiers?: LetterSpawnModifiers): LetterTileIn
     const rareMult = modifiers.rareLetterWeightMultiplier ?? 1.0;
     const vowelBoost = modifiers.vowelBoostPct ?? 0;
 
-    weights = BASE_LETTER_WEIGHTS.map((item) => {
+    weights = CORNELL_LETTER_WEIGHTS.map((item) => {
       let w = item.weight;
       if (RARE_LETTERS.has(item.letter)) {
         w *= rareMult;
@@ -159,10 +159,12 @@ export function drawRandomLetter(modifiers?: LetterSpawnModifiers): LetterTileIn
 export const BALANCE_STREAK_LIMIT = 5;
 let streakKind: 'vowel' | 'consonant' | null = null;
 let streakCount = 0;
+let seedQueue: string[] = [];
 
 export function resetLetterStreak(): void {
   streakKind = null;
   streakCount = 0;
+  seedQueue = [];
 }
 
 function drawFrom(pool: LetterWeightTable): string {
@@ -179,7 +181,7 @@ function drawFrom(pool: LetterWeightTable): string {
 
 export function drawBalancedLetter(
   limit: number = BALANCE_STREAK_LIMIT,
-  table: LetterWeightTable = BASE_LETTER_WEIGHTS,
+  table: LetterWeightTable = CORNELL_LETTER_WEIGHTS,
 ): LetterTileInfo {
   let chosen: string;
   if (streakCount >= limit && streakKind === 'vowel') {
@@ -198,3 +200,52 @@ export function drawBalancedLetter(
   }
   return { display: chosen, value: chosen };
 }
+
+export interface LetterDrawOptions {
+  table: LetterWeightTable;
+  /** 0 = no vowel/consonant streak cap. */
+  streakLimit: number;
+  /** When set, sometimes queue the letters of a target word so the pattern is formable. */
+  seedWords?: readonly string[];
+  seedChance?: number;
+}
+
+/**
+ * Draw the next tile letter. Seeded target words (sound focus) bypass the streak cap
+ * so patterns like "oo" can appear as two vowels in a row. Random fills still obey the cap.
+ */
+export function drawLetter(opts: LetterDrawOptions): LetterTileInfo {
+  const { table, streakLimit, seedWords, seedChance = 0 } = opts;
+
+  if (
+    seedQueue.length === 0 &&
+    seedWords &&
+    seedWords.length > 0 &&
+    seedChance > 0 &&
+    Math.random() < seedChance
+  ) {
+    const word = seedWords[Math.floor(Math.random() * seedWords.length)];
+    seedQueue.push(...word.split(''));
+  }
+
+  let chosen: string;
+  if (seedQueue.length > 0) {
+    chosen = seedQueue.shift() as string;
+  } else if (streakLimit > 0 && streakCount >= streakLimit && streakKind === 'vowel') {
+    chosen = drawFrom(table.filter((i) => !VOWELS.has(i.letter)));
+  } else if (streakLimit > 0 && streakCount >= streakLimit && streakKind === 'consonant') {
+    chosen = drawFrom(table.filter((i) => VOWELS.has(i.letter)));
+  } else {
+    chosen = drawFrom(table);
+  }
+
+  const kind = VOWELS.has(chosen) ? 'vowel' : 'consonant';
+  if (kind === streakKind) {
+    streakCount += 1;
+  } else {
+    streakKind = kind;
+    streakCount = 1;
+  }
+  return { display: chosen, value: chosen };
+}
+

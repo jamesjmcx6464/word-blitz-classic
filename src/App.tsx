@@ -28,7 +28,7 @@ import {
   findGroundedHexIds,
   computeScreenSpeedMultiplier,
 } from './utils/hexPhysics';
-import { drawRandomLetter, drawBalancedLetter, KID_LETTER_WEIGHTS, EASY_LETTER_WEIGHTS, LetterTileInfo } from './utils/letterBag';
+import { drawLetter, resetLetterStreak, LetterTileInfo } from './utils/letterBag';
 import { isValidWord, getWordScore, countRareLetters } from './data/dictionary';
 import { soundManager } from './utils/audio';
 import { saveHighScore, makeTimeBucketKey } from './utils/highScores';
@@ -39,6 +39,13 @@ import {
   saveCustomSettings,
   clearCustomSettings,
 } from './utils/customSettings';
+import {
+  loadLetterDistribution,
+  saveLetterDistribution,
+  resolveLetterDraw,
+  getLetterMixLabel,
+  LetterDistributionSettings,
+} from './utils/letterDistributions';
 import { SettingsModal } from './components/SettingsModal';
 import { recordSoloPlayerResult } from './utils/registeredPlayers';
 import { detectDevice } from './utils/screenMode';
@@ -89,6 +96,11 @@ export default function App() {
   const customSettingsRef = useRef<CustomGameSettings | null>(customSettings);
   customSettingsRef.current = customSettings;
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  // Letter mix (Settings > Letters). Applies to every difficulty when not Standard.
+  const [letterDist, setLetterDist] = useState<LetterDistributionSettings>(() => loadLetterDistribution());
+  const letterDistRef = useRef<LetterDistributionSettings>(letterDist);
+  letterDistRef.current = letterDist;
 
   /** Full gameplay config for a difficulty choice (presets or saved Custom settings). */
   const configFor = (choice: DifficultyChoice): DifficultyConfig =>
@@ -282,6 +294,12 @@ export default function App() {
     if (difficultyRef.current === 'custom') {
       handleChangeDifficulty('normal');
     }
+  };
+
+  const handleChangeLetterDist = (next: LetterDistributionSettings) => {
+    setLetterDist(next);
+    letterDistRef.current = next;
+    saveLetterDistribution(next);
   };
 
   // Refs for requestAnimationFrame loop
@@ -576,8 +594,7 @@ export default function App() {
     }
 
     const diffNow = difficultyRef.current;
-    const letter: LetterTileInfo =
-      diffNow === 'beginner' ? drawBalancedLetter(3, KID_LETTER_WEIGHTS) : diffNow === 'easy' ? drawBalancedLetter(5, EASY_LETTER_WEIGHTS) : drawRandomLetter();
+    const letter: LetterTileInfo = drawLetter(resolveLetterDraw(diffNow, letterDistRef.current));
 
     const newTile: HexTile = {
       id: `tile_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${Math.floor(performance.now() * 100)}`,
@@ -674,6 +691,7 @@ export default function App() {
     isSpawningRef.current = false;
     spawnTimerRef.current = 0;
     lastTimeRef.current = performance.now();
+    resetLetterStreak();
 
     freePlaySpeedRef.current = overrides?.dropSpeed ?? freePlaySettingsRef.current.dropSpeed ?? preset.dropSpeed;
     spawnIntervalRef.current = overrides?.spawnIntervalMs ?? preset.spawnIntervalMs;
@@ -862,6 +880,7 @@ export default function App() {
     setIsShaking(false);
     isSpawningRef.current = false;
     lastTimeRef.current = performance.now();
+    resetLetterStreak();
 
     setScreen('PLAYING');
 
@@ -1374,6 +1393,7 @@ export default function App() {
           onOpenSettings={() => setIsSettingsOpen(true)}
           quickPlayTimerOn={quickPlayTimerOn}
           onChangeQuickPlayTimer={handleChangeQuickPlayTimer}
+          letterMixLabel={getLetterMixLabel(letterDist)}
         />
       )}
 
@@ -1395,6 +1415,8 @@ export default function App() {
           onSave={handleSaveCustomSettings}
           onReset={handleResetCustomSettings}
           onClose={() => setIsSettingsOpen(false)}
+          letterDist={letterDist}
+          onChangeLetterDist={handleChangeLetterDist}
         />
       )}
 

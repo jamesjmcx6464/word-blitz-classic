@@ -30,6 +30,8 @@ interface StartMenuProps {
   /** Quick Play timer: on = 2-minute round, off = endless until the pile reaches the line */
   quickPlayTimerOn: boolean;
   onChangeQuickPlayTimer: (on: boolean) => void;
+  /** Non-standard letter mix label, or null for the usual mix. */
+  letterMixLabel?: string | null;
 }
 
 export const StartMenu: React.FC<StartMenuProps> = ({
@@ -46,6 +48,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
   onOpenSettings,
   quickPlayTimerOn,
   onChangeQuickPlayTimer,
+  letterMixLabel,
 }) => {
   const isWide = screenMode === 'pc';
   const activeLabel =
@@ -227,6 +230,16 @@ export const StartMenu: React.FC<StartMenuProps> = ({
           onChange={onChangeDifficulty}
           hasCustom={hasCustomSettings}
         />
+        {letterMixLabel && (
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="w-full -mt-1 px-3 py-2 rounded-xl bg-sky-500/10 border border-sky-400/30 text-left cursor-pointer hover:bg-sky-500/15 transition-colors"
+          >
+            <span className="text-[11px] font-bold text-sky-300">Letter mix </span>
+            <span className="text-xs font-semibold text-sky-100">{letterMixLabel}</span>
+          </button>
+        )}
       </main>
 
       {/* Footer Row */}
