@@ -181,6 +181,37 @@ function capBuckets(entries: HighScoreEntry[]): HighScoreEntry[] {
   return result;
 }
 
+
+/**
+ * One-time: scores earned on the old constant-speed Hard (now Nightmare) are
+ * moved to the nightmare bucket. Old nightmare scores are kept. After this flag
+ * is set, new Hard scores (time-ramp) stay under 'hard'.
+ */
+const HARD_RELABEL_KEY = 'word_blitz_hard_scores_moved_to_nightmare_v1';
+
+function relabelLegacyHardScores(entries: HighScoreEntry[]): {
+  entries: HighScoreEntry[];
+  changed: boolean;
+} {
+  try {
+    if (localStorage.getItem(HARD_RELABEL_KEY) === '1') {
+      return { entries, changed: false };
+    }
+    let changed = false;
+    const next = entries.map((e) => {
+      if (e.difficulty === 'hard') {
+        changed = true;
+        return { ...e, difficulty: 'nightmare' as const };
+      }
+      return e;
+    });
+    localStorage.setItem(HARD_RELABEL_KEY, '1');
+    return { entries: next, changed };
+  } catch {
+    return { entries, changed: false };
+  }
+}
+
 export function getHighScores(): HighScoreEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -198,7 +229,9 @@ export function getHighScores(): HighScoreEntry[] {
       }
     }
 
-    const capped = capBuckets(migrated);
+    const relabeled = relabelLegacyHardScores(migrated);
+    if (relabeled.changed) anyMigrated = true;
+    const capped = capBuckets(relabeled.entries);
     if (anyMigrated) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(capped));

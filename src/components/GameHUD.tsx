@@ -279,7 +279,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
         )}
 
         {/* Speeding up indicator */}
-        {freePlaySpeedPct !== undefined && freePlaySpeedPct > 100 && (
+        {freePlaySpeedPct !== undefined && freePlaySpeedPct >= 108 && (
           <div className="pl-3 border-l border-slate-800 hidden min-[540px]:flex items-center gap-1.5 text-purple-300 font-bold text-sm">
             <Rocket className="w-4 h-4 text-purple-400" />
             <span>Speeding up</span>

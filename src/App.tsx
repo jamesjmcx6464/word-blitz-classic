@@ -33,6 +33,7 @@ import { isValidWord, getWordScore, countRareLetters } from './data/dictionary';
 import { soundManager } from './utils/audio';
 import { saveHighScore, makeTimeBucketKey } from './utils/highScores';
 import { getSavedDifficulty, saveDifficulty, getDifficultyConfig } from './utils/difficulty';
+import { computeTimePace } from './utils/timePace';
 import {
   CustomGameSettings,
   loadCustomSettings,
@@ -124,6 +125,7 @@ export default function App() {
   const paceStepsRef = useRef<number>(0);
   const paceBaseIntervalRef = useRef<number>(0);
   const paceBaseSpeedRef = useRef<number>(0);
+  const playElapsedSecRef = useRef<number>(0);
   const activeRoundSecondsRef = useRef<number>(60);
   const lastQuickPlayConfigRef = useRef<{
     difficulty: DifficultyChoice;
@@ -271,6 +273,7 @@ export default function App() {
     paceStepsRef.current = 0;
     paceBaseIntervalRef.current = spawnIntervalRef.current;
     paceBaseSpeedRef.current = 0;
+    playElapsedSecRef.current = 0;
     handleUpdateFreePlaySettings({
       ...freePlaySettingsRef.current,
       ...settingsFromConfig(preset),
@@ -698,6 +701,7 @@ export default function App() {
     paceStepsRef.current = 0;
     paceBaseIntervalRef.current = spawnIntervalRef.current;
     paceBaseSpeedRef.current = 0;
+    playElapsedSecRef.current = 0;
     dynamicPaceEnabledRef.current =
       overrides?.dynamicPace ?? freePlaySettingsRef.current.speedIncreaseEnabled;
 
@@ -818,6 +822,7 @@ export default function App() {
     paceStepsRef.current = 0;
     paceBaseIntervalRef.current = spawnIntervalRef.current;
     paceBaseSpeedRef.current = 0;
+    playElapsedSecRef.current = 0;
 
     const initialState: ClassroomMatchState = {
       config,
@@ -846,6 +851,7 @@ export default function App() {
     paceStepsRef.current = 0;
     paceBaseIntervalRef.current = spawnIntervalRef.current;
     paceBaseSpeedRef.current = 0;
+    playElapsedSecRef.current = 0;
     freePlaySpeedRef.current = preset.dropSpeed;
 
     // Clear board if cleanBoardEachTurn is enabled
@@ -1230,11 +1236,20 @@ export default function App() {
 
       const curCeiling = freePlaySettingsRef.current.ceilingHeight;
       const effectiveGroundY = GROUND_Y;
-      const baseFallSpeed =
-        !classroomMatchRef.current &&
-        (dynamicPaceEnabledRef.current || freePlaySettingsRef.current.speedIncreaseEnabled)
-          ? freePlaySpeedRef.current
-          : freePlaySettingsRef.current.dropSpeed;
+      const presetForPace = configFor(difficultyRef.current);
+      if (presetForPace.paceCurve === 'time') {
+        playElapsedSecRef.current += dt;
+        const paced = computeTimePace(playElapsedSecRef.current);
+        freePlaySpeedRef.current = paced.dropSpeed;
+        spawnIntervalRef.current = paced.spawnIntervalMs;
+      }
+      const useDynamicSpeed =
+        presetForPace.paceCurve === 'time' ||
+        (!classroomMatchRef.current &&
+          (dynamicPaceEnabledRef.current || freePlaySettingsRef.current.speedIncreaseEnabled));
+      const baseFallSpeed = useDynamicSpeed
+        ? freePlaySpeedRef.current
+        : freePlaySettingsRef.current.dropSpeed;
       // Apply screen-size multiplier on top of base/difficulty speed in ALL modes
       const activeFallSpeed = baseFallSpeed * speedMultiplierRef.current;
 
@@ -1501,9 +1516,10 @@ export default function App() {
             viewMode={viewMode}
             timeLeftSec={freePlayTimeLeft}
             freePlaySpeedPct={
-              !classroomMatch &&
-              (dynamicPaceEnabledRef.current || freePlaySettings.speedIncreaseEnabled)
-                ? (freePlaySpeedRef.current / freePlaySettings.dropSpeed) * 100
+              configFor(difficulty).paceCurve === 'time' ||
+              (!classroomMatch &&
+                (dynamicPaceEnabledRef.current || freePlaySettings.speedIncreaseEnabled))
+                ? (freePlaySpeedRef.current / Math.max(1, freePlaySettings.dropSpeed)) * 100
                 : undefined
             }
             onOpenWordHistory={() => setIsWordHistoryOpen(true)}

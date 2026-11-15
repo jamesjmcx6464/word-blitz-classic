@@ -82,7 +82,7 @@ export interface DifficultyConfig {
   phoneTargetOnScreen: number; // avg tiles falling at once on a phone-width board (scaled up on wider boards)
   wallWidthPct: number; // play area width percentage
   paceEnabled: boolean; // whether entering words speeds things up
-  paceCurve?: 'compound' | 'log'; // 'log' = fast early, flattening rises (default compound)
+  paceCurve?: 'compound' | 'log' | 'time'; // 'time' = ramp with play time (Hard); 'log' = words entered
   letterMods?: LetterSpawnModifiers; // letter mix tweaks (undefined = standard mix)
 }
 
@@ -142,7 +142,27 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
   hard: {
     id: 'hard',
     label: 'Hard',
-    description: 'Classic fast pace',
+    description: 'Starts like Normal · Speeds up over time',
+    // Starts at Normal's speed, tiles, ceiling and phone cadence; time ramp caps near old Hard.
+    dropSpeed: 170,
+    spawnIntervalMs: 1200,
+    minSpawnIntervalMs: 900,
+    spawnAccelFactor: 0.96,
+    speedIncreaseRate: 5,
+    maxSpeedMultiplier: 260 / 170,
+    ceilingHeight: 60,
+    tileRadius: 31,
+    maxInFlightOffset: -1,
+    phoneTargetOnScreen: 3,
+    wallWidthPct: 100,
+    paceEnabled: true,
+    paceCurve: 'time',
+  },
+  nightmare: {
+    id: 'nightmare',
+    label: 'Nightmare',
+    description: 'Fast from the start',
+    // Former Hard settings (constant speed, denser phone cadence, tighter ceiling).
     dropSpeed: 260,
     spawnIntervalMs: 850,
     minSpawnIntervalMs: 300,
@@ -155,23 +175,6 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
     phoneTargetOnScreen: 4,
     wallWidthPct: 100,
     paceEnabled: false,
-  },
-  nightmare: {
-    id: 'nightmare',
-    label: 'Nightmare',
-    description: 'Extreme speed & higher ceiling',
-    dropSpeed: 360,
-    spawnIntervalMs: 580,
-    minSpawnIntervalMs: 210,
-    spawnAccelFactor: 0.89,
-    speedIncreaseRate: 15,
-    maxSpeedMultiplier: 4.2,
-    ceilingHeight: 115,
-    tileRadius: 26,
-    maxInFlightOffset: 1,
-    phoneTargetOnScreen: 5,
-    wallWidthPct: 100,
-    paceEnabled: true,
   },
 };
 
