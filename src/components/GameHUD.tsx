@@ -242,7 +242,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   return (
     <header className="w-full h-14 sm:h-16 px-2 sm:px-3 flex items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950 select-none shrink-0 text-white">
       {/* Zone 1 & 2: Score & Game Stats */}
-      <div className="flex items-center gap-3 sm:gap-4 text-left min-w-0">
+      <div className="flex items-center gap-3 sm:gap-4 text-left min-w-0 overflow-hidden">
         {/* Solo Player Badge (if set) */}
         {soloPlayer && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-indigo-500/20 border-2 border-indigo-400/50 shrink-0">
@@ -313,7 +313,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <StreakGauge multiplier={streakMultiplier} flash={streakFlash} />
             )}
             {letterMixLabel && (
-              <div className="hidden min-[400px]:block min-w-0">
+              <div className={`${streakActive ? 'hidden 2xl:block' : 'hidden min-[400px]:block'} min-w-0`}>
                 <span className="text-[10px] sm:text-sm text-slate-400 font-medium block leading-tight">Letters</span>
                 <span className="text-[11px] sm:text-sm font-bold text-sky-200 truncate block max-w-[90px] sm:max-w-[180px]" title={letterMixLabel}>
                   {letterMixLabel}
