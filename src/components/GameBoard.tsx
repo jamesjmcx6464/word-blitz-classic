@@ -11,6 +11,7 @@ export interface GroundPlayerBadge {
 }
 import { isRareLetterDisplay } from '../data/dictionary';
 import { clampStreak, streakStyle } from '../utils/groupStreak';
+import { GroundLetterHint } from '../utils/letterDistributions';
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -43,6 +44,7 @@ interface GameBoardProps {
   streakMultiplier?: number;
   streakFlash?: 'up' | 'down' | null;
   groundBadge?: GroundPlayerBadge | null;
+  letterHint?: GroundLetterHint | null;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -66,6 +68,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   streakMultiplier = 1,
   streakFlash = null,
   groundBadge = null,
+  letterHint = null,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -455,7 +458,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             fill="#0f172a"
             opacity="0.9"
           />
-          {!groundBadge && (
+          {!groundBadge && !letterHint && (
             <text
               x={boardWidth / 2}
               y={groundY + (boardHeight - groundY) / 2 + 4}
@@ -733,12 +736,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         {streakActive && streakFlash === 'down' && (
           <div className="arena-streak-flash" aria-hidden="true" />
         )}
-        {groundBadge && (
+        {(groundBadge || letterHint) && (
           <div
-            className="absolute left-0 right-0 pointer-events-none z-[3] flex items-center justify-between gap-2 px-2.5 sm:px-3"
+            className="@container/ground absolute left-0 right-0 pointer-events-none z-[3] flex items-center justify-between gap-1.5 px-2 sm:px-3"
             style={{ top: `${(groundY / boardHeight) * 100}%`, bottom: 0 }}
           >
-            {groundBadge.onClick ? (
+            {groundBadge ? (
+              groundBadge.onClick ? (
               <button
                 type="button"
                 onClick={(e) => {
@@ -747,7 +751,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
                 aria-label={`${groundBadge.name}, ${groundBadge.caption}. Open scoreboard`}
-                className="pointer-events-auto max-w-[58%] min-w-0 flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2.5 py-1 sm:py-1.5 rounded-2xl border-2 shadow-sm text-left cursor-pointer active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                className={`pointer-events-auto min-w-0 flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2 py-1 sm:py-1.5 rounded-2xl border-2 shadow-sm text-left cursor-pointer active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+                  letterHint ? 'max-w-[46%]' : 'max-w-[58%]'
+                }`}
                 style={{
                   backgroundColor: `${groundBadge.color ?? '#6366f1'}28`,
                   borderColor: groundBadge.color ?? '#818cf8',
@@ -763,9 +769,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   </span>
                 </span>
               </button>
-            ) : (
+              ) : (
               <div
-                className="max-w-[58%] min-w-0 flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2.5 py-1 sm:py-1.5 rounded-2xl border-2 shadow-sm"
+                className={`min-w-0 flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2 py-1 sm:py-1.5 rounded-2xl border-2 shadow-sm ${
+                  letterHint ? 'max-w-[46%]' : 'max-w-[58%]'
+                }`}
                 style={{
                   backgroundColor: `${groundBadge.color ?? '#6366f1'}28`,
                   borderColor: groundBadge.color ?? '#818cf8',
@@ -781,10 +789,73 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   </span>
                 </span>
               </div>
+              )
+            ) : (
+              <span className="shrink-0" />
             )}
-            <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500 shrink-0 pr-0.5">
-              Ground
-            </span>
+            {letterHint ? (
+              <div
+                className={`ml-auto min-w-0 text-right leading-tight ${
+                  groundBadge ? 'max-w-[50%]' : 'max-w-[80%]'
+                }`}
+                aria-label={
+                  letterHint.kind === 'sound'
+                    ? `Sound focus, ${letterHint.pattern}`
+                    : letterHint.title
+                }
+              >
+                {letterHint.kind === 'sound' && letterHint.pattern ? (
+                  <>
+                    {/* Narrow: "oo words" with the pattern emphasized */}
+                    <p className="@[440px]/ground:hidden text-[11px] font-bold text-slate-200">
+                      <span
+                        className="font-mono font-black text-[15px] tracking-wide lowercase align-middle"
+                        style={{
+                          color: streakActive ? streakColor.fill : '#7dd3fc',
+                          WebkitTextStroke: '0.6px rgba(15,23,42,0.95)',
+                          paintOrder: 'stroke fill',
+                        }}
+                      >
+                        {letterHint.pattern}
+                      </span>
+                      {' words'}
+                    </p>
+                    {/* Mid and up: "Sound focus · oo" plus samples when there is room */}
+                    <div className="hidden @[440px]/ground:block">
+                      <p className="text-[10px] sm:text-xs font-semibold text-slate-300">
+                        Sound focus ·{' '}
+                        <span
+                          className="font-mono font-black text-base sm:text-lg tracking-wide lowercase align-middle"
+                          style={{
+                            color: streakActive ? streakColor.fill : '#7dd3fc',
+                            WebkitTextStroke: '0.6px rgba(15,23,42,0.95)',
+                            paintOrder: 'stroke fill',
+                          }}
+                        >
+                          {letterHint.pattern}
+                        </span>
+                      </p>
+                      {letterHint.samples && letterHint.samples.length > 0 && (
+                        <p className="hidden @[560px]/ground:block text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400 mt-0.5">
+                          {letterHint.samples.join('  ·  ')}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p
+                    className="font-display font-black text-[11px] sm:text-sm leading-tight break-words"
+                    style={{ color: streakActive ? streakColor.fill : '#7dd3fc' }}
+                  >
+                    {letterHint.title}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500 shrink-0 pr-0.5">
+                Ground
+              </span>
+            )}
           </div>
         )}
       </div>

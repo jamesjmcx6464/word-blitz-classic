@@ -82,6 +82,35 @@ export function getLetterMixLabel(settings: LetterDistributionSettings): string 
   return null;
 }
 
+/** Copy for the arena ground-strip reminder (null on Standard). */
+export interface GroundLetterHint {
+  kind: 'sound' | 'preset';
+  title: string;
+  pattern?: string;
+  shortLabel: string;
+  samples?: string[];
+}
+
+export function getGroundLetterHint(settings: LetterDistributionSettings): GroundLetterHint | null {
+  if (isStandardLetterMix(settings)) return null;
+  if (settings.sound) {
+    const def = SOUND_FOCUS[settings.sound];
+    return {
+      kind: 'sound',
+      title: 'Sound focus',
+      pattern: def.label,
+      shortLabel: `${def.label} words`,
+      samples: def.samples.slice(0, 2),
+    };
+  }
+  const title = PRESET_META[settings.preset].label;
+  return {
+    kind: 'preset',
+    title,
+    shortLabel: title,
+  };
+}
+
 export function streakLimitFor(difficulty: DifficultyChoice): number {
   if (difficulty === 'beginner') return 3;
   if (difficulty === 'easy') return 5;

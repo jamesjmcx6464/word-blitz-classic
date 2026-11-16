@@ -54,6 +54,7 @@ import {
   saveLetterDistribution,
   resolveLetterDraw,
   getLetterMixLabel,
+  getGroundLetterHint,
   isStandardLetterMix,
   LetterDistributionSettings,
 } from './utils/letterDistributions';
@@ -1615,7 +1616,6 @@ export default function App() {
           <GameHUD
             score={score}
             longestWord={longestWord}
-            letterMixLabel={getLetterMixLabel(letterDist) ?? 'Standard'}
             streakActive={!isStandardLetterMix(letterDist)}
             streakMultiplier={groupStreak}
             streakFlash={streakFlash}
@@ -1681,6 +1681,7 @@ export default function App() {
               streakActive={!isStandardLetterMix(letterDist)}
               streakMultiplier={groupStreak}
               streakFlash={streakFlash}
+              letterHint={getGroundLetterHint(letterDist)}
               groundBadge={
                 classroomMatch
                   ? (() => {

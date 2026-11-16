@@ -17,7 +17,6 @@ import gsap from 'gsap';
 interface GameHUDProps {
   score: number;
   longestWord: string;
-  letterMixLabel?: string;
   streakMultiplier?: number;
   streakActive?: boolean;
   streakFlash?: 'up' | 'down' | null;
@@ -90,15 +89,9 @@ const RollingScore: React.FC<RollingScoreProps> = ({ value, prefix = '', classNa
   );
 };
 
-/** Shorter HUD text: drop the redundant "Sound focus ·" prefix. */
-function compactLetterMixLabel(label: string): string {
-  return label.replace(/^Sound focus\s*[·•-]\s*/i, '').trim();
-}
-
 export const GameHUD: React.FC<GameHUDProps> = ({
   score,
   longestWord,
-  letterMixLabel,
   streakMultiplier = 1,
   streakActive = false,
   streakFlash = null,
@@ -224,7 +217,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   // Solo / Free Play Mode HUD
   return (
     <header className="@container/hud w-full h-14 sm:h-16 px-2 sm:px-3 flex items-center justify-between gap-1.5 sm:gap-2 border-b border-slate-800/80 bg-slate-950 select-none shrink-0 text-white">
-      {/* Score & game stats — hide Letters first, then Longest word, as the bar shrinks */}
+      {/* Score & game stats — Longest word hides on tighter widths */}
       <div className="flex items-center gap-1.5 sm:gap-2 text-left min-w-0 overflow-hidden">
         {/* Points */}
         <div className="shrink-0">
@@ -264,27 +257,14 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           </div>
         )}
 
-        {/* Letter mix + group streak gauge (gauge always visible; Letters hides first on phone) */}
-        {(streakActive || letterMixLabel) && (
-          <div className="pl-2 sm:pl-3 border-l border-slate-800 flex items-center gap-1.5 sm:gap-2 min-w-0">
-            {streakActive && (
-              <StreakGauge multiplier={streakMultiplier} flash={streakFlash} />
-            )}
-            {letterMixLabel && (
-              <div className="hidden @[400px]/hud:block min-w-0">
-                <span className="text-[10px] sm:text-xs text-slate-400 font-medium block leading-tight">Letters</span>
-                <span
-                  className="text-xs sm:text-sm font-bold text-sky-200 block whitespace-nowrap"
-                  title={letterMixLabel}
-                >
-                  {compactLetterMixLabel(letterMixLabel)}
-                </span>
-              </div>
-            )}
+        {/* Group streak gauge (letter-mix reminder lives in the ground strip) */}
+        {streakActive && (
+          <div className="pl-2 sm:pl-3 border-l border-slate-800 flex items-center shrink-0">
+            <StreakGauge multiplier={streakMultiplier} flash={streakFlash} />
           </div>
         )}
 
-        {/* Longest word — hides after Letters as space tightens; PC column at ~480px skips it */}
+        {/* Longest word — hides on tighter HUD widths */}
         {isWide && longestWord && (
           <div className="pl-2 sm:pl-3 border-l border-slate-800 hidden @[560px]/hud:block min-w-0">
             <span className="text-xs sm:text-sm text-slate-400 font-medium block">Longest word</span>
