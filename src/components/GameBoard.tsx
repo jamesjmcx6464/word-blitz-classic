@@ -1,6 +1,14 @@
 import React, { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { HexTile, FloatingScore, ViewMode } from '../types/game';
+
+export interface GroundPlayerBadge {
+  name: string;
+  emoji: string;
+  caption: string;
+  color?: string;
+  onClick?: () => void;
+}
 import { isRareLetterDisplay } from '../data/dictionary';
 import { clampStreak, streakStyle } from '../utils/groupStreak';
 import {
@@ -34,6 +42,7 @@ interface GameBoardProps {
   streakActive?: boolean;
   streakMultiplier?: number;
   streakFlash?: 'up' | 'down' | null;
+  groundBadge?: GroundPlayerBadge | null;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -56,6 +65,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   streakActive = false,
   streakMultiplier = 1,
   streakFlash = null,
+  groundBadge = null,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -229,21 +239,26 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   })();
   const isStreakMax = streakActive && streakStage === 4;
 
+  const streakVars = streakActive
+    ? ({
+        ['--arena-r' as string]: String(streakRgb.r),
+        ['--arena-g' as string]: String(streakRgb.g),
+        ['--arena-b' as string]: String(streakRgb.b),
+      } as React.CSSProperties)
+    : undefined;
+
   return (
-    <div className="relative w-full h-full min-h-0 min-w-0 flex items-center justify-center select-none touch-none overflow-hidden">
+    <div className="relative w-full h-full min-h-0 min-w-0 flex items-center justify-center select-none touch-none overflow-hidden [container-type:size]">
       <div
-        className={`relative w-full h-full max-h-full max-w-full ${
+        className={`relative overflow-hidden rounded-2xl ${
           streakActive ? 'arena-streak-frame' : ''
         } ${isStreakMax ? 'arena-streak-max' : ''}`}
-        style={
-          streakActive
-            ? ({
-                ['--arena-r' as string]: streakRgb.r,
-                ['--arena-g' as string]: streakRgb.g,
-                ['--arena-b' as string]: streakRgb.b,
-              } as React.CSSProperties)
-            : undefined
-        }
+        style={{
+          aspectRatio: `${boardWidth} / ${boardHeight}`,
+          width: `min(100%, calc(100cqh * ${boardWidth} / ${boardHeight}))`,
+          height: `min(100%, calc(100cqw * ${boardHeight} / ${boardWidth}))`,
+          ...streakVars,
+        }}
       >
       <svg
         ref={svgRef}
@@ -440,17 +455,19 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             fill="#0f172a"
             opacity="0.9"
           />
-          <text
-            x={boardWidth / 2}
-            y={groundY + 18}
-            textAnchor="middle"
-            fontSize="9"
-            fontWeight="600"
-            fill="#64748b"
-            className="tracking-widest uppercase select-none"
-          >
-            Ground
-          </text>
+          {!groundBadge && (
+            <text
+              x={boardWidth / 2}
+              y={groundY + (boardHeight - groundY) / 2 + 4}
+              textAnchor="middle"
+              fontSize="10"
+              fontWeight="600"
+              fill="#64748b"
+              className="tracking-widest uppercase select-none"
+            >
+              Ground
+            </text>
+          )}
         </g>
 
         {/* Frozen Hexagons */}
@@ -715,6 +732,60 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         )}
         {streakActive && streakFlash === 'down' && (
           <div className="arena-streak-flash" aria-hidden="true" />
+        )}
+        {groundBadge && (
+          <div
+            className="absolute left-0 right-0 pointer-events-none z-[3] flex items-center justify-between gap-2 px-2.5 sm:px-3"
+            style={{ top: `${(groundY / boardHeight) * 100}%`, bottom: 0 }}
+          >
+            {groundBadge.onClick ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  groundBadge.onClick?.();
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                aria-label={`${groundBadge.name}, ${groundBadge.caption}. Open scoreboard`}
+                className="pointer-events-auto max-w-[58%] min-w-0 flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2.5 py-1 sm:py-1.5 rounded-2xl border-2 shadow-sm text-left cursor-pointer active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                style={{
+                  backgroundColor: `${groundBadge.color ?? '#6366f1'}28`,
+                  borderColor: groundBadge.color ?? '#818cf8',
+                }}
+              >
+                <span className="text-lg sm:text-xl leading-none drop-shadow shrink-0">{groundBadge.emoji}</span>
+                <span className="min-w-0">
+                  <span className="font-display font-black text-xs sm:text-sm text-white block leading-tight truncate">
+                    {groundBadge.name}
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-200/90 block leading-none truncate">
+                    {groundBadge.caption}
+                  </span>
+                </span>
+              </button>
+            ) : (
+              <div
+                className="max-w-[58%] min-w-0 flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2.5 py-1 sm:py-1.5 rounded-2xl border-2 shadow-sm"
+                style={{
+                  backgroundColor: `${groundBadge.color ?? '#6366f1'}28`,
+                  borderColor: groundBadge.color ?? '#818cf8',
+                }}
+              >
+                <span className="text-lg sm:text-xl leading-none drop-shadow shrink-0">{groundBadge.emoji}</span>
+                <span className="min-w-0">
+                  <span className="font-display font-black text-xs sm:text-sm text-white block leading-tight truncate">
+                    {groundBadge.name}
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-indigo-200 block leading-none truncate">
+                    {groundBadge.caption}
+                  </span>
+                </span>
+              </div>
+            )}
+            <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500 shrink-0 pr-0.5">
+              Ground
+            </span>
+          </div>
         )}
       </div>
     </div>

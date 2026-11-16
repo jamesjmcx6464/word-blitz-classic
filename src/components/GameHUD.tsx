@@ -90,6 +90,11 @@ const RollingScore: React.FC<RollingScoreProps> = ({ value, prefix = '', classNa
   );
 };
 
+/** Shorter HUD text: drop the redundant "Sound focus ·" prefix. */
+function compactLetterMixLabel(label: string): string {
+  return label.replace(/^Sound focus\s*[·•-]\s*/i, '').trim();
+}
+
 export const GameHUD: React.FC<GameHUDProps> = ({
   score,
   longestWord,
@@ -106,41 +111,20 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenWordHistory,
   classroomMatch,
   onOpenScoreboard,
-  soloPlayer,
 }) => {
   const isWide = viewMode === 'wide';
 
   // If in Classroom Team Mode:
   if (classroomMatch) {
-    const currentTeam = classroomMatch.config.teams[classroomMatch.currentTeamIndex];
     const isTimer = classroomMatch.config.turnCondition === 'timer';
 
     return (
-      <header className="w-full h-14 sm:h-16 px-2 sm:px-3 flex items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950 select-none shrink-0 text-white">
-        {/* Left: Active Team Pill & Score */}
+      <header className="@container/hud w-full h-14 sm:h-16 px-2 sm:px-3 flex items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950 select-none shrink-0 text-white">
+        {/* Left: Score (team name lives in the arena ground strip) */}
         <div className="flex items-center gap-2 sm:gap-3 text-left min-w-0">
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-2xl border-2 shadow-sm shrink-0"
-            style={{
-              backgroundColor: `${currentTeam.color}25`,
-              borderColor: currentTeam.color,
-            }}
-          >
-            <span className="text-xl sm:text-2xl drop-shadow">{currentTeam.emoji}</span>
-            <div className="min-w-0">
-              <span className="font-display font-black text-sm sm:text-base text-white block leading-tight truncate max-w-[120px] sm:max-w-[180px]">
-                {currentTeam.name}
-              </span>
-              <span className="text-[10px] sm:text-xs font-bold text-slate-300 block leading-none">
-                Round {classroomMatch.currentRound}/{classroomMatch.config.totalRounds}
-              </span>
-            </div>
-          </div>
-
-          {/* Points */}
-          <div className="pl-1 sm:pl-2">
+          <div className="shrink-0">
             <span className="text-[10px] sm:text-xs font-bold text-amber-400 block leading-tight">
-              Team Total
+              Points
             </span>
             <div className="text-lg sm:text-xl font-display font-black text-amber-300 font-mono leading-none">
               <RollingScore value={score} />
@@ -152,21 +136,21 @@ export const GameHUD: React.FC<GameHUDProps> = ({
         <div className="flex items-center gap-2 shrink-0">
           {isTimer ? (
             <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border-2 font-mono font-black text-base sm:text-lg ${
+              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-2xl border-2 font-mono font-black text-sm sm:text-base ${
                 classroomMatch.turnTimeLeft <= 10
                   ? 'bg-rose-500/20 border-rose-400 text-rose-300 motion-safe:animate-pulse'
                   : 'bg-slate-900 border-slate-700 text-slate-100'
               }`}
             >
-              <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+              <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>
                 {Math.floor(classroomMatch.turnTimeLeft / 60)}:
                 {(classroomMatch.turnTimeLeft % 60).toString().padStart(2, '0')}
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-indigo-500/20 border-2 border-indigo-400 text-indigo-300 font-bold text-xs sm:text-sm">
-              <Target className="w-4 h-4 text-indigo-300 shrink-0" />
+            <div className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-2xl bg-indigo-500/20 border-2 border-indigo-400 text-indigo-300 font-bold text-xs sm:text-sm">
+              <Target className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
               <span>
                 {classroomMatch.turnWordsCount} of {classroomMatch.config.turnWordsTarget} words
               </span>
@@ -185,32 +169,31 @@ export const GameHUD: React.FC<GameHUDProps> = ({
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Scoreboard button */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {onOpenScoreboard && (
             <button
               type="button"
               onClick={onOpenScoreboard}
-              className="min-h-[44px] px-3 rounded-2xl bg-indigo-600/90 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
+              aria-label="Scores"
+              className="min-h-[44px] min-w-[44px] @[600px]/hud:px-3 rounded-2xl bg-indigo-600/90 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
             >
               <Users className="w-4 h-4" />
-              <span className="hidden min-[440px]:inline">Scores</span>
+              <span className="hidden @[600px]/hud:inline">Scores</span>
             </button>
           )}
 
-          {/* My Words Button */}
           {onOpenWordHistory && (
             <button
               type="button"
               onClick={onOpenWordHistory}
-              className="min-h-[44px] px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+              aria-label="My Words"
+              className="min-h-[44px] min-w-[44px] @[600px]/hud:px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
             >
               <BookOpen className="w-4 h-4 text-amber-400" />
-              <span className="hidden sm:inline">Words</span>
+              <span className="hidden @[600px]/hud:inline">Words</span>
             </button>
           )}
 
-          {/* Audio Toggle */}
           <button
             type="button"
             onClick={onToggleSound}
@@ -240,44 +223,29 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
   // Solo / Free Play Mode HUD
   return (
-    <header className="w-full h-14 sm:h-16 px-2 sm:px-3 flex items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950 select-none shrink-0 text-white">
-      {/* Zone 1 & 2: Score & Game Stats */}
-      <div className="flex items-center gap-3 sm:gap-4 text-left min-w-0 overflow-hidden">
-        {/* Solo Player Badge (if set) */}
-        {soloPlayer && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-indigo-500/20 border-2 border-indigo-400/50 shrink-0">
-            <span className="text-xl sm:text-2xl drop-shadow">{soloPlayer.logo}</span>
-            <div className="min-w-0">
-              <span className="font-display font-black text-xs sm:text-sm text-white block leading-tight truncate max-w-[90px] sm:max-w-[130px]">
-                {soloPlayer.name}
-              </span>
-              <span className="text-[10px] font-bold text-indigo-300 block leading-none">
-                Solo
-              </span>
-            </div>
-          </div>
-        )}
-
+    <header className="@container/hud w-full h-14 sm:h-16 px-2 sm:px-3 flex items-center justify-between gap-1.5 sm:gap-2 border-b border-slate-800/80 bg-slate-950 select-none shrink-0 text-white">
+      {/* Score & game stats — hide Letters first, then Longest word, as the bar shrinks */}
+      <div className="flex items-center gap-1.5 sm:gap-2 text-left min-w-0 overflow-hidden">
         {/* Points */}
-        <div>
-          <div className="text-sm font-bold text-amber-400 flex items-center gap-1">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+        <div className="shrink-0">
+          <div className="text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-1">
+            <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400 text-amber-400" />
             <span>Points</span>
           </div>
-          <div className="text-xl sm:text-2xl font-display font-black text-amber-300 font-mono leading-none">
+          <div className="text-lg sm:text-xl font-display font-black text-amber-300 font-mono leading-none">
             <RollingScore value={score} />
           </div>
         </div>
 
         {/* Optional Timer */}
         {timeLeftSec !== undefined && timeLeftSec !== null && (
-          <div className="pl-3 border-l border-slate-800">
-            <div className="text-sm font-bold text-amber-400 flex items-center gap-1">
-              <Clock className="w-4 h-4" />
+          <div className="pl-2 sm:pl-3 border-l border-slate-800 shrink-0">
+            <div className="text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>{timeLeftSec <= 15 ? 'Almost done!' : 'Time'}</span>
             </div>
             <div
-              className={`text-lg sm:text-xl font-mono font-black ${
+              className={`text-base sm:text-lg font-mono font-black ${
                 timeLeftSec <= 15
                   ? 'text-amber-300 motion-safe:animate-pulse'
                   : 'text-slate-100'
@@ -290,60 +258,62 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
         {/* Speeding up indicator */}
         {freePlaySpeedPct !== undefined && freePlaySpeedPct >= 108 && (
-          <div className="pl-3 border-l border-slate-800 hidden min-[540px]:flex items-center gap-1.5 text-purple-300 font-bold text-sm">
+          <div className="pl-2 sm:pl-3 border-l border-slate-800 hidden @[540px]/hud:flex items-center gap-1.5 text-purple-300 font-bold text-xs sm:text-sm shrink-0">
             <Rocket className="w-4 h-4 text-purple-400" />
             <span>Speeding up</span>
           </div>
         )}
 
-        {/* Longest word (wide screens only) */}
-        {isWide && longestWord && (
-          <div className="pl-3 border-l border-slate-800 hidden md:block">
-            <span className="text-sm text-slate-400 font-medium block">Longest word</span>
-            <span className="text-base font-bold font-mono text-slate-200 uppercase">
-              {longestWord}
-            </span>
-          </div>
-        )}
-
-        {/* Letter mix + group streak gauge (gauge stays visible on phones) */}
+        {/* Letter mix + group streak gauge (gauge always visible; Letters hides first on phone) */}
         {(streakActive || letterMixLabel) && (
           <div className="pl-2 sm:pl-3 border-l border-slate-800 flex items-center gap-1.5 sm:gap-2 min-w-0">
             {streakActive && (
               <StreakGauge multiplier={streakMultiplier} flash={streakFlash} />
             )}
             {letterMixLabel && (
-              <div className={`${streakActive ? 'hidden 2xl:block' : 'hidden min-[400px]:block'} min-w-0`}>
-                <span className="text-[10px] sm:text-sm text-slate-400 font-medium block leading-tight">Letters</span>
-                <span className="text-[11px] sm:text-sm font-bold text-sky-200 truncate block max-w-[90px] sm:max-w-[180px]" title={letterMixLabel}>
-                  {letterMixLabel}
+              <div className="hidden @[400px]/hud:block min-w-0">
+                <span className="text-[10px] sm:text-xs text-slate-400 font-medium block leading-tight">Letters</span>
+                <span
+                  className="text-xs sm:text-sm font-bold text-sky-200 block whitespace-nowrap"
+                  title={letterMixLabel}
+                >
+                  {compactLetterMixLabel(letterMixLabel)}
                 </span>
               </div>
             )}
           </div>
         )}
+
+        {/* Longest word — hides after Letters as space tightens; PC column at ~480px skips it */}
+        {isWide && longestWord && (
+          <div className="pl-2 sm:pl-3 border-l border-slate-800 hidden @[560px]/hud:block min-w-0">
+            <span className="text-xs sm:text-sm text-slate-400 font-medium block">Longest word</span>
+            <span className="text-sm sm:text-base font-bold font-mono text-slate-200 uppercase truncate block max-w-[9rem]">
+              {longestWord}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Zone 3: Buttons (min 48x48) */}
-      <div className="flex items-center gap-2 shrink-0">
-        {/* My Words Button (shown on every screen size) */}
+      {/* Buttons: keep all three; shrink the Words label before dropping it */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {onOpenWordHistory && (
           <button
             type="button"
             onClick={onOpenWordHistory}
-            className="min-h-[48px] px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 font-bold text-sm flex items-center gap-1.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
+            aria-label="My Words"
+            className="min-h-[44px] min-w-[44px] @[600px]/hud:min-h-[48px] px-2 @[600px]/hud:px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
           >
-            <BookOpen className="w-5 h-5 text-amber-400" />
-            <span>My Words</span>
+            <BookOpen className="w-5 h-5 text-amber-400 shrink-0" />
+            <span className="hidden @[600px]/hud:inline">Words</span>
           </button>
         )}
 
-        {/* Audio Toggle */}
         <button
           type="button"
           onClick={onToggleSound}
           aria-label={soundEnabled ? 'Mute sound' : 'Unmute sound'}
-          className="min-h-[48px] min-w-[48px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
+          className="min-h-[44px] min-w-[44px] @[520px]/hud:min-h-[48px] @[520px]/hud:min-w-[48px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
         >
           {soundEnabled ? (
             <Volume2 className="w-5 h-5 text-amber-400" />
@@ -352,12 +322,11 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           )}
         </button>
 
-        {/* Pause Button */}
         <button
           type="button"
           onClick={onPause}
           aria-label="Pause game"
-          className="min-h-[48px] min-w-[48px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
+          className="min-h-[44px] min-w-[44px] @[520px]/hud:min-h-[48px] @[520px]/hud:min-w-[48px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
         >
           <Pause className="w-5 h-5" />
         </button>

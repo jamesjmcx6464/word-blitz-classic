@@ -65,7 +65,7 @@ export const StreakGauge: React.FC<StreakGaugeProps> = ({
     >
       <svg
         viewBox="0 0 120 78"
-        className="w-[68px] h-[44px] sm:w-[80px] sm:h-[52px] overflow-visible"
+        className="w-[68px] h-[44px] overflow-visible"
         aria-hidden="true"
       >
         {/* Muted track */}

@@ -8,9 +8,11 @@ export const HEX_H = HEX_HEIGHT / 2; // ~24.2487
 export const BOARD_WIDTH_NARROW = 420;
 export const BOARD_WIDTH_WIDE = 720;
 export const BOARD_WIDTH = BOARD_WIDTH_NARROW;
-export const BOARD_HEIGHT = 610;
+export const BOARD_HEIGHT = 640;
 
-// GROUND_Y = 560 gives 50px clearance above bottom of viewBox (610), so all letters and ground line are 100% visible
+// Ground line stays at 560 so tile stacking/physics are unchanged.
+// BOARD_HEIGHT 640 gives an 80px strip below the line for the player/team badge
+// (tiles never enter this area).
 export const GROUND_Y = 560;
 export const DANGER_Y = 85;
 export const SPAWN_Y = -HEX_H - 12;
@@ -23,7 +25,7 @@ export const FALL_SPEED_PIXELS_PER_SEC = 260;
 export const DROP_GRAVITY_PIXELS_PER_SEC = 260; // Same normal fall rate
 
 export const REFERENCE_PLAY_AREA_WIDTH = BOARD_WIDTH_WIDE; // 720px desktop tuned width
-export const REFERENCE_PLAY_AREA_HEIGHT = BOARD_HEIGHT; // 610px desktop tuned height
+export const REFERENCE_PLAY_AREA_HEIGHT = 610; // original desktop-tuned play height (strip enlargement ignored)
 export const SPEED_MULTIPLIER_MIN = 0.5;
 export const SPEED_MULTIPLIER_MAX = 1.5;
 

@@ -281,14 +281,21 @@ export default function App() {
   // Dev-only hook so playtests can force a streak stage (stripped from production builds).
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    const w = window as Window & { __wbSetArenaStreak?: (m: number) => void };
+    const w = window as Window & {
+      __wbSetArenaStreak?: (m: number) => void;
+      __wbSetSoloPlayer?: (name: string, logo: string) => void;
+    };
     w.__wbSetArenaStreak = (m: number) => {
       const next = Math.max(1, Math.min(4, Math.round(m * 2) / 2));
       groupStreakRef.current = next;
       setGroupStreak(next);
     };
+    w.__wbSetSoloPlayer = (name: string, logo: string) => {
+      setCurrentSoloPlayer({ name, logo });
+    };
     return () => {
       delete w.__wbSetArenaStreak;
+      delete w.__wbSetSoloPlayer;
     };
   }, []);
 
@@ -1674,6 +1681,26 @@ export default function App() {
               streakActive={!isStandardLetterMix(letterDist)}
               streakMultiplier={groupStreak}
               streakFlash={streakFlash}
+              groundBadge={
+                classroomMatch
+                  ? (() => {
+                      const team = classroomMatch.config.teams[classroomMatch.currentTeamIndex];
+                      return {
+                        name: team.name,
+                        emoji: team.emoji,
+                        caption: `Round ${classroomMatch.currentRound}/${classroomMatch.config.totalRounds}`,
+                        color: team.color,
+                        onClick: () => setIsClassroomScoreboardOpen(true),
+                      };
+                    })()
+                  : currentSoloPlayer
+                    ? {
+                        name: currentSoloPlayer.name,
+                        emoji: currentSoloPlayer.logo,
+                        caption: 'Solo',
+                      }
+                    : null
+              }
             />
           </div>
         </div>
