@@ -56,7 +56,7 @@ export const StreakGauge: React.FC<StreakGaugeProps> = ({
 
   return (
     <div
-      className={`relative shrink-0 leading-none ${className} ${
+      className={`relative shrink-0 leading-none ${className || 'w-[68px]'} ${
         flash === 'down' ? 'motion-safe:animate-shake' : ''
       } ${isMax ? 'animate-streak-max' : ''}`}
       title={`Streak ×${formatStreakMult(stage)}`}
@@ -65,7 +65,7 @@ export const StreakGauge: React.FC<StreakGaugeProps> = ({
     >
       <svg
         viewBox="0 0 120 78"
-        className="w-[68px] h-[44px] overflow-visible"
+        className="w-full h-auto overflow-visible"
         aria-hidden="true"
       >
         {/* Muted track */}

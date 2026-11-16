@@ -157,18 +157,18 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </span>
           )}
           {streakActive && (
-            <StreakGauge multiplier={streakMultiplier} flash={streakFlash} />
+            <StreakGauge className="w-[52px] @[400px]/hud:w-[60px] @[520px]/hud:w-[68px]" multiplier={streakMultiplier} flash={streakFlash} />
           )}
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 @[400px]/hud:gap-1.5 shrink-0">
           {onOpenScoreboard && (
             <button
               type="button"
               onClick={onOpenScoreboard}
               aria-label="Scores"
-              className="min-h-[44px] min-w-[44px] @[600px]/hud:px-3 rounded-2xl bg-indigo-600/90 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
+              className="min-h-[40px] min-w-[40px] @[400px]/hud:min-h-[44px] @[400px]/hud:min-w-[44px] @[600px]/hud:px-3 rounded-2xl bg-indigo-600/90 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
             >
               <Users className="w-4 h-4" />
               <span className="hidden @[600px]/hud:inline">Scores</span>
@@ -180,7 +180,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               type="button"
               onClick={onOpenWordHistory}
               aria-label="My Words"
-              className="min-h-[44px] min-w-[44px] @[600px]/hud:px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+              className="min-h-[40px] min-w-[40px] @[400px]/hud:min-h-[44px] @[400px]/hud:min-w-[44px] @[600px]/hud:px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
             >
               <BookOpen className="w-4 h-4 text-amber-400" />
               <span className="hidden @[600px]/hud:inline">Words</span>
@@ -191,7 +191,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             type="button"
             onClick={onToggleSound}
             aria-label={soundEnabled ? 'Mute sound' : 'Unmute sound'}
-            className="min-h-[44px] min-w-[44px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm"
+            className="min-h-[40px] min-w-[40px] @[400px]/hud:min-h-[44px] @[400px]/hud:min-w-[44px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm"
           >
             {soundEnabled ? (
               <Volume2 className="w-4 h-4 text-amber-400" />
@@ -205,7 +205,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             type="button"
             onClick={onPause}
             aria-label="Pause game"
-            className="min-h-[44px] min-w-[44px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm"
+            className="min-h-[40px] min-w-[40px] @[400px]/hud:min-h-[44px] @[400px]/hud:min-w-[44px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm"
           >
             <Pause className="w-4 h-4" />
           </button>
@@ -216,29 +216,29 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
   // Solo / Free Play Mode HUD
   return (
-    <header className="@container/hud w-full h-14 sm:h-16 px-2 sm:px-3 flex items-center justify-between gap-1.5 sm:gap-2 border-b border-slate-800/80 bg-slate-950 select-none shrink-0 text-white">
-      {/* Score & game stats — Longest word hides on tighter widths */}
-      <div className="flex items-center gap-1.5 sm:gap-2 text-left min-w-0 overflow-hidden">
+    <header className="@container/hud w-full h-14 sm:h-16 px-1.5 @[400px]/hud:px-2 sm:px-3 flex items-center justify-between gap-1 @[400px]/hud:gap-1.5 sm:gap-2 border-b border-slate-800/80 bg-slate-950 select-none shrink-0 text-white">
+      {/* Score & game stats — Longest word hides on tighter widths. Never clip the gauge. */}
+      <div className="flex items-center gap-1 @[400px]/hud:gap-1.5 sm:gap-2 text-left min-w-0">
         {/* Points */}
         <div className="shrink-0">
-          <div className="text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-1">
+          <div className="text-[10px] @[400px]/hud:text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-0.5 @[400px]/hud:gap-1">
             <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400 text-amber-400" />
-            <span>Points</span>
+            <span className="hidden @[400px]/hud:inline">Points</span>
           </div>
-          <div className="text-lg sm:text-xl font-display font-black text-amber-300 font-mono leading-none">
+          <div className="text-base @[400px]/hud:text-lg sm:text-xl font-display font-black text-amber-300 font-mono leading-none">
             <RollingScore value={score} />
           </div>
         </div>
 
-        {/* Optional Timer */}
+        {/* Optional Timer — drop the "Time" label on narrow phones to keep the gauge visible */}
         {timeLeftSec !== undefined && timeLeftSec !== null && (
-          <div className="pl-2 sm:pl-3 border-l border-slate-800 shrink-0">
-            <div className="text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-1">
+          <div className="pl-1.5 @[400px]/hud:pl-2 sm:pl-3 border-l border-slate-800 shrink-0">
+            <div className="text-[10px] @[400px]/hud:text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-0.5 @[400px]/hud:gap-1">
               <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>{timeLeftSec <= 15 ? 'Almost done!' : 'Time'}</span>
+              <span className="hidden @[400px]/hud:inline">{timeLeftSec <= 15 ? 'Almost done!' : 'Time'}</span>
             </div>
             <div
-              className={`text-base sm:text-lg font-mono font-black ${
+              className={`text-sm @[400px]/hud:text-base sm:text-lg font-mono font-black ${
                 timeLeftSec <= 15
                   ? 'text-amber-300 motion-safe:animate-pulse'
                   : 'text-slate-100'
@@ -259,8 +259,12 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
         {/* Group streak gauge (letter-mix reminder lives in the ground strip) */}
         {streakActive && (
-          <div className="pl-2 sm:pl-3 border-l border-slate-800 flex items-center shrink-0">
-            <StreakGauge multiplier={streakMultiplier} flash={streakFlash} />
+          <div className="pl-1.5 @[400px]/hud:pl-2 sm:pl-3 border-l border-slate-800 flex items-center shrink-0">
+            <StreakGauge
+              className="w-[52px] @[400px]/hud:w-[60px] @[520px]/hud:w-[68px]"
+              multiplier={streakMultiplier}
+              flash={streakFlash}
+            />
           </div>
         )}
 
@@ -276,15 +280,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
       </div>
 
       {/* Buttons: keep all three; shrink the Words label before dropping it */}
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div className="flex items-center gap-1 @[400px]/hud:gap-1.5 sm:gap-2 shrink-0">
         {onOpenWordHistory && (
           <button
             type="button"
             onClick={onOpenWordHistory}
             aria-label="My Words"
-            className="min-h-[44px] min-w-[44px] @[600px]/hud:min-h-[48px] px-2 @[600px]/hud:px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
+            className="min-h-[40px] min-w-[40px] @[400px]/hud:min-h-[44px] @[400px]/hud:min-w-[44px] @[600px]/hud:min-h-[48px] px-1.5 @[400px]/hud:px-2 @[600px]/hud:px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
           >
-            <BookOpen className="w-5 h-5 text-amber-400 shrink-0" />
+            <BookOpen className="w-4 h-4 @[400px]/hud:w-5 @[400px]/hud:h-5 text-amber-400 shrink-0" />
             <span className="hidden @[600px]/hud:inline">Words</span>
           </button>
         )}
@@ -293,12 +297,12 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           type="button"
           onClick={onToggleSound}
           aria-label={soundEnabled ? 'Mute sound' : 'Unmute sound'}
-          className="min-h-[44px] min-w-[44px] @[520px]/hud:min-h-[48px] @[520px]/hud:min-w-[48px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
+          className="min-h-[40px] min-w-[40px] @[400px]/hud:min-h-[44px] @[400px]/hud:min-w-[44px] @[520px]/hud:min-h-[48px] @[520px]/hud:min-w-[48px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
         >
           {soundEnabled ? (
-            <Volume2 className="w-5 h-5 text-amber-400" />
+            <Volume2 className="w-4 h-4 @[400px]/hud:w-5 @[400px]/hud:h-5 text-amber-400" />
           ) : (
-            <VolumeX className="w-5 h-5 text-slate-500" />
+            <VolumeX className="w-4 h-4 @[400px]/hud:w-5 @[400px]/hud:h-5 text-slate-500" />
           )}
         </button>
 
@@ -306,9 +310,9 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           type="button"
           onClick={onPause}
           aria-label="Pause game"
-          className="min-h-[44px] min-w-[44px] @[520px]/hud:min-h-[48px] @[520px]/hud:min-w-[48px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
+          className="min-h-[40px] min-w-[40px] @[400px]/hud:min-h-[44px] @[400px]/hud:min-w-[44px] @[520px]/hud:min-h-[48px] @[520px]/hud:min-w-[48px] rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-700 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95 shadow-sm"
         >
-          <Pause className="w-5 h-5" />
+          <Pause className="w-4 h-4 @[400px]/hud:w-5 @[400px]/hud:h-5" />
         </button>
       </div>
     </header>
