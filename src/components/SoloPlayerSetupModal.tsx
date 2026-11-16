@@ -10,11 +10,13 @@ import {
   Edit3,
   Clock,
   Trophy,
+  Trash2,
 } from 'lucide-react';
 import { STUDENT_LOGOS } from '../data/studentLogos';
 import {
   getRegisteredPlayers,
   registerOrSelectPlayer,
+  deleteRegisteredPlayer,
   getClaimedLogos,
   RegisteredPlayer,
 } from '../utils/registeredPlayers';
@@ -49,6 +51,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
   const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>([]);
   const [selectedExistingPlayer, setSelectedExistingPlayer] = useState<RegisteredPlayer | null>(null);
   const [isAddingNew, setIsAddingNew] = useState<boolean>(true);
+  const [confirmDelete, setConfirmDelete] = useState<boolean>(false);
 
   const [playerName, setPlayerName] = useState<string>('');
   const [selectedLogo, setSelectedLogo] = useState<string>('');
@@ -146,6 +149,20 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
     }
     setSelectedExistingPlayer(player);
     setIsAddingNew(false);
+    setConfirmDelete(false);
+  };
+
+  const handleDeletePlayer = () => {
+    if (!selectedExistingPlayer) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    deleteRegisteredPlayer(selectedExistingPlayer);
+    setRegisteredPlayers(getRegisteredPlayers());
+    setSelectedExistingPlayer(null);
+    setIsAddingNew(true);
+    setConfirmDelete(false);
   };
 
   const handleSelectAddNewPlayer = () => {
@@ -155,6 +172,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
     }
     setSelectedExistingPlayer(null);
     setIsAddingNew(true);
+    setConfirmDelete(false);
   };
 
   const handleLaunch = () => {
@@ -319,14 +337,30 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
                   )}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleSelectAddNewPlayer}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-slate-200 flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
-              >
-                <UserPlus className="w-3.5 h-3.5 text-indigo-400" />
-                <span>New Player</span>
-              </button>
+              <div className="flex flex-col gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSelectAddNewPlayer}
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-slate-200 flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>New Player</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeletePlayer}
+                  onMouseLeave={() => setConfirmDelete(false)}
+                  className={`px-3 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    confirmDelete
+                      ? 'bg-rose-600 hover:bg-rose-500 border-rose-400 text-white'
+                      : 'bg-slate-800 hover:bg-rose-950 border-slate-600 hover:border-rose-500 text-rose-300'
+                  }`}
+                  aria-label={`Delete player ${selectedExistingPlayer.name}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{confirmDelete ? 'Tap to confirm' : 'Delete'}</span>
+                </button>
+              </div>
             </div>
           ) : (
             <>
