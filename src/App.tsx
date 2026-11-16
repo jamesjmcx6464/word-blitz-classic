@@ -278,6 +278,20 @@ export default function App() {
     setStreakFlash(null);
   };
 
+  // Dev-only hook so playtests can force a streak stage (stripped from production builds).
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as Window & { __wbSetArenaStreak?: (m: number) => void };
+    w.__wbSetArenaStreak = (m: number) => {
+      const next = Math.max(1, Math.min(4, Math.round(m * 2) / 2));
+      groupStreakRef.current = next;
+      setGroupStreak(next);
+    };
+    return () => {
+      delete w.__wbSetArenaStreak;
+    };
+  }, []);
+
 
   const [isClassroomScoreboardOpen, setIsClassroomScoreboardOpen] = useState<boolean>(false);
   const [activeTurnWords, setActiveTurnWords] = useState<WordEntry[]>([]);
@@ -1657,6 +1671,9 @@ export default function App() {
               wallRight={activeWallBounds.right}
               viewMode={viewMode}
               tileRadius={freePlaySettings.tileRadius}
+              streakActive={!isStandardLetterMix(letterDist)}
+              streakMultiplier={groupStreak}
+              streakFlash={streakFlash}
             />
           </div>
         </div>

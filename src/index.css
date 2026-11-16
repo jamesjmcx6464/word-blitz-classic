@@ -194,3 +194,97 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-streak-max { animation: none; filter: drop-shadow(0 0 5px #c084fc); }
 }
+
+
+/* Group-streak arena backlight: CSS on a static frame only (no SVG filters on tiles). */
+.arena-streak-frame {
+  --arena-r: 248;
+  --arena-g: 113;
+  --arena-b: 113;
+}
+.arena-streak-svg {
+  transition: border-color 500ms ease, box-shadow 500ms ease;
+}
+.arena-streak-frame .arena-streak-svg {
+  border-color: rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.6);
+  box-shadow:
+    0 25px 50px -12px rgb(0 0 0 / 0.45),
+    0 0 16px rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.38),
+    0 0 36px rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.2),
+    inset 0 0 32px rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.18);
+}
+.arena-streak-wash {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 32%,
+    rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.08) 58%,
+    rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.2) 100%
+  );
+  transition: background 500ms ease, opacity 500ms ease;
+  z-index: 1;
+}
+@keyframes arena-streak-max-wash {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
+}
+@keyframes arena-streak-max-glow {
+  0%, 100% {
+    box-shadow:
+      0 25px 50px -12px rgb(0 0 0 / 0.45),
+      0 0 16px rgba(192, 132, 252, 0.4),
+      0 0 36px rgba(192, 132, 252, 0.2),
+      inset 0 0 32px rgba(192, 132, 252, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 25px 50px -12px rgb(0 0 0 / 0.45),
+      0 0 26px rgba(192, 132, 252, 0.65),
+      0 0 56px rgba(192, 132, 252, 0.36),
+      inset 0 0 44px rgba(192, 132, 252, 0.32);
+  }
+}
+.arena-streak-max .arena-streak-wash {
+  animation: arena-streak-max-wash 1.2s ease-in-out infinite;
+}
+.arena-streak-max .arena-streak-svg {
+  animation: arena-streak-max-glow 1.2s ease-in-out infinite;
+}
+@keyframes arena-streak-drop-flash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.arena-streak-flash {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  background: rgba(244, 63, 94, 0.2);
+  box-shadow: inset 0 0 28px rgba(244, 63, 94, 0.28);
+  z-index: 2;
+  animation: arena-streak-drop-flash 0.45s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .arena-streak-svg,
+  .arena-streak-wash {
+    transition: none;
+  }
+  .arena-streak-max .arena-streak-wash,
+  .arena-streak-max .arena-streak-svg {
+    animation: none;
+  }
+  .arena-streak-max .arena-streak-svg {
+    box-shadow:
+      0 25px 50px -12px rgb(0 0 0 / 0.45),
+      0 0 20px rgba(192, 132, 252, 0.5),
+      0 0 40px rgba(192, 132, 252, 0.25),
+      inset 0 0 36px rgba(192, 132, 252, 0.24);
+  }
+  .arena-streak-flash {
+    animation: none;
+    opacity: 0.35;
+  }
+}

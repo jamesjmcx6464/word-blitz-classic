@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { HexTile, FloatingScore, ViewMode } from '../types/game';
 import { isRareLetterDisplay } from '../data/dictionary';
+import { clampStreak, streakStyle } from '../utils/groupStreak';
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -30,6 +31,9 @@ interface GameBoardProps {
   wallRight?: number;
   viewMode?: ViewMode;
   tileRadius?: number;
+  streakActive?: boolean;
+  streakMultiplier?: number;
+  streakFlash?: 'up' | 'down' | null;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -49,6 +53,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   wallRight = boardWidth,
   viewMode,
   tileRadius = HEX_RADIUS,
+  streakActive = false,
+  streakMultiplier = 1,
+  streakFlash = null,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -214,15 +221,37 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   const hasSideWalls = wallLeft > 2 || wallRight < boardWidth - 2;
 
+  const streakStage = clampStreak(streakMultiplier);
+  const streakColor = streakStyle(streakStage);
+  const streakRgb = (() => {
+    const n = parseInt(streakColor.fill.slice(1), 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  })();
+  const isStreakMax = streakActive && streakStage === 4;
+
   return (
     <div className="relative w-full h-full min-h-0 min-w-0 flex items-center justify-center select-none touch-none overflow-hidden">
+      <div
+        className={`relative w-full h-full max-h-full max-w-full ${
+          streakActive ? 'arena-streak-frame' : ''
+        } ${isStreakMax ? 'arena-streak-max' : ''}`}
+        style={
+          streakActive
+            ? ({
+                ['--arena-r' as string]: streakRgb.r,
+                ['--arena-g' as string]: streakRgb.g,
+                ['--arena-b' as string]: streakRgb.b,
+              } as React.CSSProperties)
+            : undefined
+        }
+      >
       <svg
         ref={svgRef}
         viewBox={`0 0 ${boardWidth} ${boardHeight}`}
         preserveAspectRatio="xMidYMid meet"
         onPointerDown={handleBoardPointerDown}
         style={{ touchAction: 'none' }}
-        className="w-full h-full max-h-full max-w-full rounded-2xl shadow-2xl bg-slate-900/95 border border-slate-800 cursor-pointer"
+        className={`w-full h-full max-h-full max-w-full rounded-2xl shadow-2xl bg-slate-900/95 border border-slate-800 cursor-pointer arena-streak-svg`}
       >
         <defs>
           {/* Subtle canvas background gradient */}
@@ -681,6 +710,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           ))}
         </g>
       </svg>
+        {streakActive && (
+          <div className="arena-streak-wash" aria-hidden="true" />
+        )}
+        {streakActive && streakFlash === 'down' && (
+          <div className="arena-streak-flash" aria-hidden="true" />
+        )}
+      </div>
     </div>
   );
 };
