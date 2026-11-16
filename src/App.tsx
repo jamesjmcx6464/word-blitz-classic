@@ -239,6 +239,8 @@ export default function App() {
 
   // Word History tracking
   const [wordHistory, setWordHistory] = useState<WordEntry[]>([]);
+  const wordHistoryRef = useRef<WordEntry[]>([]);
+  wordHistoryRef.current = wordHistory;
   const [isWordHistoryOpen, setIsWordHistoryOpen] = useState<boolean>(false);
 
   // Classroom Team Match State
@@ -500,6 +502,8 @@ export default function App() {
       totalWords: totalWordsClearedRef.current,
       playerName: activePlayer?.name,
       playerLogo: activePlayer?.logo,
+      words: wordHistoryRef.current.map((w) => ({ word: w.word, score: w.score })),
+      letterMix: getLetterMixLabel(letterDistRef.current) ?? 'Standard',
     });
     setGameOverStats({ rank: stats.rank, isNewHighScore: stats.isNewHighScore });
 
@@ -614,6 +618,8 @@ export default function App() {
             playerName: team.name,
             playerLogo: team.emoji,
             allowZeroScore: true,
+            words: team.wordsFound.map((w) => ({ word: w.word, score: w.score })),
+            letterMix: getLetterMixLabel(letterDistRef.current) ?? 'Standard',
           });
         });
 

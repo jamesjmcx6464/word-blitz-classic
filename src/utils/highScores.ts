@@ -13,6 +13,10 @@ export interface HighScoreEntry {
   totalWords: number;
   date: string;
   timestamp: number;
+  /** Words made this game (saved from Nov 2026 on). */
+  words?: { word: string; score: number }[];
+  /** Letter mix label at the time, e.g. 'Standard', 'Sound focus · oo'. */
+  letterMix?: string;
 }
 
 const STORAGE_KEY = 'word_blitz_high_scores_v1';
@@ -147,6 +151,14 @@ function migrateEntry(raw: Record<string, unknown>): {
         : undefined,
     playerName,
     playerLogo,
+    words: Array.isArray(raw.words)
+      ? (raw.words as unknown[])
+          .filter((w): w is { word: string; score: number } =>
+            !!w && typeof (w as { word?: unknown }).word === 'string'
+          )
+          .map((w) => ({ word: w.word, score: typeof w.score === 'number' ? w.score : 0 }))
+      : undefined,
+    letterMix: typeof raw.letterMix === 'string' && raw.letterMix ? raw.letterMix : undefined,
     score: typeof raw.score === 'number' ? raw.score : 0,
     longestWord: typeof raw.longestWord === 'string' && raw.longestWord ? raw.longestWord : '-',
     totalWords: typeof raw.totalWords === 'number' ? raw.totalWords : 0,
@@ -272,6 +284,8 @@ export interface SaveHighScoreParams {
   playerName?: string;
   playerLogo?: string;
   allowZeroScore?: boolean;
+  words?: { word: string; score: number }[];
+  letterMix?: string;
 }
 
 export function saveHighScore(
@@ -288,6 +302,8 @@ export function saveHighScore(
     playerName,
     playerLogo,
     allowZeroScore = false,
+    words,
+    letterMix,
   } = params;
 
   const hasPlayer = Boolean(playerName?.trim());
@@ -307,6 +323,8 @@ export function saveHighScore(
     score,
     longestWord: longestWord || '-',
     totalWords,
+    words: words && words.length > 0 ? words : [],
+    letterMix,
     date: new Date().toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',

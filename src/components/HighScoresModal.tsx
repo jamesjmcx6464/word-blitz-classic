@@ -19,6 +19,7 @@ import {
   User,
   Users,
   Clock,
+  ChevronDown,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -65,6 +66,69 @@ const MODE_META: Record<
 };
 
 const MODE_ORDER: LeaderboardMode[] = ['quick', 'solo', 'team'];
+
+const TOP_N = 5;
+const EXPANDABLE_N = 3;
+
+const DIFFICULTY_LABEL: Record<string, string> = {
+  beginner: 'Beginner',
+  easy: 'Easy',
+  normal: 'Normal',
+  hard: 'Hard',
+  nightmare: 'Nightmare',
+  custom: 'Custom settings',
+};
+
+/** Settings + words for one saved game. */
+const EntryDetails: React.FC<{ entry: HighScoreEntry }> = ({ entry }) => {
+  const chips: [string, string][] = [
+    ['Difficulty', entry.difficulty ? DIFFICULTY_LABEL[entry.difficulty] ?? entry.difficulty : 'Not recorded'],
+    [entry.timeBucket.startsWith('words:') ? 'Turn' : 'Timer', formatTimeBucketLabel(entry.timeBucket)],
+    ['Letters', entry.letterMix ?? 'Not recorded'],
+    ['Date', entry.date],
+  ];
+  const words = entry.words ?? [];
+  return (
+    <div className="mt-2 p-3 rounded-xl bg-slate-950/70 border border-slate-700/70 space-y-2.5 text-left">
+      <div>
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Settings</span>
+        <div className="flex flex-wrap gap-1.5">
+          {chips.map(([k, v]) => (
+            <span key={k} className="px-2 py-1 rounded-lg bg-slate-800 border border-slate-700 text-[11px] text-slate-200">
+              <span className="text-slate-400">{k}:</span> <span className="font-bold">{v}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div>
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+          Words ({entry.words ? words.length : entry.totalWords})
+        </span>
+        {entry.words === undefined ? (
+          <p className="text-xs text-slate-500">Words weren't saved for this older game.</p>
+        ) : words.length === 0 ? (
+          <p className="text-xs text-slate-500">No words made.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+            {words.map((w, i) => (
+              <span
+                key={i}
+                className={`px-2 py-0.5 rounded-lg font-mono font-bold text-xs uppercase border ${
+                  w.word.toUpperCase() === entry.longestWord.toUpperCase()
+                    ? 'bg-amber-400/20 border-amber-400/60 text-amber-200'
+                    : 'bg-slate-800 border-slate-700 text-slate-100'
+                }`}
+              >
+                {w.word}
+                <span className="ml-1 text-[10px] text-slate-400 normal-case">+{w.score}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const HighScoresModal: React.FC<HighScoresModalProps> = ({
   onBack,
@@ -159,6 +223,28 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
       .sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
   }, [scores, activeMode, activeTimeBucket]);
 
+  const topScores = filteredScores.slice(0, TOP_N);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedPlayerKey, setSelectedPlayerKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setExpandedId(null);
+    setSelectedPlayerKey(null);
+  }, [activeMode, activeTimeBucket]);
+
+  /** Solo/Team: each player's or team's best game in this category. */
+  const playerBests = useMemo(() => {
+    if (activeMode === 'quick') return [];
+    const best = new Map<string, HighScoreEntry>();
+    for (const e of filteredScores) {
+      const key = `${(e.playerName || '').toLowerCase()}::${e.playerLogo || ''}`;
+      if (!best.has(key)) best.set(key, e); // filteredScores is sorted best-first
+    }
+    return Array.from(best.entries()).map(([key, entry]) => ({ key, entry }));
+  }, [filteredScores, activeMode]);
+
+  const selectedPlayer = playerBests.find((p) => p.key === selectedPlayerKey) ?? null;
+
   const handleClearAll = () => {
     clearHighScores();
     setScores([]);
@@ -185,7 +271,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                 Leaderboard
               </h2>
               <span className="text-xs font-semibold text-amber-400/90 block">
-                High Scores by Mode &amp; Time
+                Top 5 by Mode &amp; Time · tap a top 3 score to see its words
               </span>
             </div>
           </div>
@@ -333,6 +419,57 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
 
         {/* Scores Table */}
         <div className="flex-1 overflow-y-auto py-3.5 space-y-2.5 my-1">
+          {playerBests.length > 0 && (
+            <div className="pb-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">
+                {activeMode === 'team' ? 'Teams' : 'Players'}, tap to see their best game
+              </span>
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                {playerBests.map(({ key, entry }) => {
+                  const on = key === selectedPlayerKey;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlayerKey(on ? null : key);
+                        setExpandedId(null);
+                      }}
+                      className={`shrink-0 px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                        on
+                          ? 'bg-indigo-500/25 border-indigo-400 text-white'
+                          : 'bg-slate-800/70 border-slate-700 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      {entry.playerLogo && <span className="text-base">{entry.playerLogo}</span>}
+                      <span className="max-w-[110px] truncate">{entry.playerName || 'Player'}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedPlayer && (
+                <div className="mt-1.5 p-3 rounded-2xl bg-indigo-500/10 border border-indigo-400/50">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-2xl">{selectedPlayer.entry.playerLogo}</span>
+                      <div className="min-w-0">
+                        <span className="font-display font-black text-white truncate block">
+                          {selectedPlayer.entry.playerName}
+                        </span>
+                        <span className="text-[11px] text-indigo-200">
+                          Top score · {selectedPlayer.entry.totalWords} words · Longest {selectedPlayer.entry.longestWord}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="font-display font-black text-xl text-amber-300 font-mono shrink-0">
+                      {selectedPlayer.entry.score.toLocaleString()} <span className="text-xs text-amber-400/80">pts</span>
+                    </span>
+                  </div>
+                  <EntryDetails entry={selectedPlayer.entry} />
+                </div>
+              )}
+            </div>
+          )}
           {filteredScores.length === 0 ? (
             <div className="py-14 text-center text-slate-500 text-sm space-y-2">
               <div className="w-12 h-12 rounded-2xl bg-slate-800/80 mx-auto flex items-center justify-center text-slate-600">
@@ -344,7 +481,9 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
               </p>
             </div>
           ) : (
-            filteredScores.map((entry, idx) => {
+            topScores.map((entry, idx) => {
+              const canExpand = idx < EXPANDABLE_N;
+              const isOpen = canExpand && expandedId === entry.id;
               const isJustAdded = lastResult?.entryId && entry.id === lastResult.entryId;
               const fallbackName =
                 entry.mode === 'team'
@@ -353,9 +492,25 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                   ? 'Student'
                   : 'Quick Player';
               return (
+                <div key={entry.id}>
                 <div
-                  key={entry.id}
+                  role={canExpand ? 'button' : undefined}
+                  tabIndex={canExpand ? 0 : undefined}
+                  aria-expanded={canExpand ? isOpen : undefined}
+                  onClick={canExpand ? () => setExpandedId(isOpen ? null : entry.id) : undefined}
+                  onKeyDown={
+                    canExpand
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setExpandedId(isOpen ? null : entry.id);
+                          }
+                        }
+                      : undefined
+                  }
                   className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                    canExpand ? 'cursor-pointer hover:brightness-110' : ''
+                  } ${
                     isJustAdded
                       ? 'bg-amber-500/20 border-amber-400 shadow-lg shadow-amber-500/15 ring-1 ring-amber-400/60 text-amber-100'
                       : idx === 0
@@ -415,10 +570,17 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
                     <div className="text-base sm:text-lg font-display font-black tabular-nums tracking-tight text-amber-300 font-mono">
                       {entry.score.toLocaleString()} <span className="text-xs font-bold text-amber-400/80">pts</span>
                     </div>
-                    <div className="text-[10px] text-slate-500 tabular-nums">
+                    <div className="text-[10px] text-slate-500 tabular-nums flex items-center justify-end gap-1">
                       {entry.date}
+                      {canExpand && (
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                        />
+                      )}
                     </div>
                   </div>
+                </div>
+                {isOpen && <EntryDetails entry={entry} />}
                 </div>
               );
             })
