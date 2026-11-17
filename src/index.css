@@ -282,3 +282,12 @@
     opacity: 0.35;
   }
 }
+
+/* End-of-round tap guard: buttons ignore taps and look dimmed until armed */
+[data-armed='false'] button {
+  pointer-events: none;
+  opacity: 0.35;
+}
+[data-armed] button {
+  transition: opacity 0.2s ease-out;
+}

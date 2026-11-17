@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTapReady } from '../hooks/useTapReady';
 import { Play, Trophy, Home, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -23,6 +24,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   onBackToMenu,
   reason = 'The letters reached the top!',
 }) => {
+  const tapReady = useTapReady(600);
   const isTimeOut = /time/i.test(reason);
   const title = isTimeOut ? "Time's up!" : 'Nice try!';
   const reasonText = isTimeOut ? reason : 'The letters reached the top!';
@@ -39,7 +41,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm select-none animate-fade-in">
+    <div data-armed={tapReady ? 'true' : 'false'} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm select-none animate-fade-in">
       <div className="w-full max-w-md bg-white border-4 border-amber-300 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center text-slate-800">
         {/* Banner */}
         {isNewHighScore ? (

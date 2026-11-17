@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTapReady } from '../hooks/useTapReady';
 import { Trophy, Medal, Star, RotateCcw, Users, Home, Award } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ClassroomMatchState, ClassroomTeam } from '../types/game';
@@ -18,6 +19,7 @@ export const ClassroomVictoryModal: React.FC<ClassroomVictoryModalProps> = ({
   onExitToMenu,
   isWide,
 }) => {
+  const tapReady = useTapReady(600);
   const { config } = matchState;
   const sortedTeams = [...config.teams].sort((a, b) => b.score - a.score);
   const winner = sortedTeams[0];
@@ -47,7 +49,7 @@ export const ClassroomVictoryModal: React.FC<ClassroomVictoryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md select-none text-slate-100 overflow-y-auto no-scrollbar">
+    <div data-armed={tapReady ? 'true' : 'false'} className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md select-none text-slate-100 overflow-y-auto no-scrollbar">
       <div
         className={`w-full ${
           isWide ? 'max-w-3xl' : 'max-w-md'

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTapReady } from '../hooks/useTapReady';
 import { Play, Trophy, CheckCircle, Clock, Target, Flag } from 'lucide-react';
 import { ClassroomMatchState } from '../types/game';
 
@@ -15,6 +16,7 @@ export const TurnTransitionModal: React.FC<TurnTransitionModalProps> = ({
   onFinishMatchEarly,
   isWide,
 }) => {
+  const tapReady = useTapReady(600);
   const { config, currentTeamIndex, currentRound, lastTurnSummary } = matchState;
   const nextTeam = config.teams[currentTeamIndex];
 
@@ -37,7 +39,7 @@ export const TurnTransitionModal: React.FC<TurnTransitionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md select-none text-slate-100 overflow-y-auto no-scrollbar">
+    <div data-armed={tapReady ? 'true' : 'false'} className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md select-none text-slate-100 overflow-y-auto no-scrollbar">
       <div
         className={`w-full ${
           isWide ? 'max-w-2xl' : 'max-w-md'

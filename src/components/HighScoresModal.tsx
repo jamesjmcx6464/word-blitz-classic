@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTapReady } from '../hooks/useTapReady';
 import {
   getHighScores,
   clearHighScores,
@@ -136,6 +137,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
   onStartNextStudent,
   lastResult = null,
 }) => {
+  const tapReady = useTapReady(600);
   const [scores, setScores] = useState<HighScoreEntry[]>(() => getHighScores());
   const [confirmClear, setConfirmClear] = useState<'none' | 'mode' | 'all'>('none');
 
@@ -258,7 +260,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md select-none text-slate-100 overflow-y-auto no-scrollbar animate-fade-in">
+    <div data-armed={tapReady ? 'true' : 'false'} className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md select-none text-slate-100 overflow-y-auto no-scrollbar animate-fade-in">
       <div className="w-full max-w-lg bg-slate-900 border-2 border-slate-700/80 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-slate-800 shrink-0">
