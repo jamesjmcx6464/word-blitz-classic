@@ -12,8 +12,35 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.webmanifest" />
+    <style>
+      /* Tablets/phones in landscape: the arena only fits in portrait, so ask to rotate.
+         Touch-only devices, so laptops and desktops are never affected. */
+      #rotate-overlay { display: none; }
+      @media (orientation: landscape) and (hover: none) and (pointer: coarse) {
+        #rotate-overlay {
+          display: flex; position: fixed; inset: 0; z-index: 2147483647;
+          flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+          background: #020617; color: #f1f5f9; text-align: center; padding: 24px;
+          font-family: Outfit, system-ui, sans-serif;
+        }
+        #root { visibility: hidden; }
+      }
+      #rotate-overlay .phone {
+        width: 64px; height: 104px; border: 5px solid #fbbf24; border-radius: 14px;
+        animation: rotate-hint 2s ease-in-out infinite;
+      }
+      @keyframes rotate-hint { 0%,25% { transform: rotate(-90deg); } 60%,100% { transform: rotate(0deg); } }
+      #rotate-overlay h2 { margin: 0; font-size: 26px; font-weight: 900; }
+      #rotate-overlay p { margin: 0; font-size: 16px; color: #94a3b8; }
+    </style>
   </head>
   <body class="bg-slate-950 text-slate-100 select-none antialiased overscroll-none">
+    <div id="rotate-overlay" role="alert">
+      <div class="phone"></div>
+      <h2>Please turn your device</h2>
+      <p>Word Blitz plays in portrait mode.</p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
