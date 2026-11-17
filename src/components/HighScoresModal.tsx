@@ -363,7 +363,7 @@ export const HighScoresModal: React.FC<HighScoresModalProps> = ({
         )}
 
         {/* Just-Completed Run Banner (when arriving directly from Solo Play) */}
-        {lastResult && (
+        {lastResult && lastResult.playerName && (
           <div className="mt-3 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-slate-900 border-2 border-amber-400/60 flex items-center justify-between gap-3 shrink-0 shadow-lg shadow-amber-500/10">
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-3xl shrink-0 drop-shadow">{lastResult.playerLogo}</span>

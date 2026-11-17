@@ -217,6 +217,7 @@ export default function App() {
     isNewHighScore: boolean;
   }>({ rank: -1, isNewHighScore: false });
   const [gameOverReason, setGameOverReason] = useState<string>('The letters reached the top!');
+  const [highScoresReturn, setHighScoresReturn] = useState<'MENU' | 'GAMEOVER'>('MENU');
 
   // Free Play Settings (persistent in localStorage)
   const [freePlaySettings, setFreePlaySettings] = useState<FreePlaySettings>(() => {
@@ -305,6 +306,14 @@ export default function App() {
       __wbSetArenaStreak?: (m: number) => void;
       __wbSetCharge?: (c: number) => void;
       __wbSetSoloPlayer?: (name: string, logo: string) => void;
+      __wbShowGameOver?: (opts?: {
+        score?: number;
+        longestWord?: string;
+        totalWords?: number;
+        rank?: number;
+        isNewHighScore?: boolean;
+        reason?: string;
+      }) => void;
     };
     w.__wbSetArenaStreak = (m: number) => {
       const next = clampCharge((Math.max(1, Math.min(4, Math.round(m * 2) / 2)) - 1) * 200);
@@ -319,10 +328,22 @@ export default function App() {
     w.__wbSetSoloPlayer = (name: string, logo: string) => {
       setCurrentSoloPlayer({ name, logo });
     };
+    w.__wbShowGameOver = (opts = {}) => {
+      setScore(opts.score ?? 1280);
+      setLongestWord(opts.longestWord ?? 'BLAST');
+      setTotalWordsCleared(opts.totalWords ?? 13);
+      setGameOverStats({
+        rank: opts.rank ?? 2,
+        isNewHighScore: opts.isNewHighScore ?? false,
+      });
+      setGameOverReason(opts.reason ?? 'The letters reached the top!');
+      setScreen('GAMEOVER');
+    };
     return () => {
       delete w.__wbSetArenaStreak;
       delete w.__wbSetCharge;
       delete w.__wbSetSoloPlayer;
+      delete w.__wbShowGameOver;
     };
   }, []);
 
@@ -561,7 +582,19 @@ export default function App() {
       });
       setScreen('HIGHSCORES');
     } else {
-      setLastSoloResult(null);
+      setLastSoloResult({
+        entryId: stats.entryId,
+        mode: 'quick',
+        timeBucket,
+        playerName: '',
+        playerLogo: '',
+        score: scoreRef.current,
+        totalWords: totalWordsClearedRef.current,
+        longestWord: longestWordRef.current || '-',
+        rank: stats.rank,
+        isNewHighScore: stats.isNewHighScore,
+        reason: reasonText,
+      });
       setScreen('GAMEOVER');
     }
   }, []);
@@ -1538,6 +1571,7 @@ export default function App() {
           onOpenTeamSetup={() => setIsTeamSetupOpen(true)}
           onOpenHighScores={() => {
             setLastSoloResult(null);
+            setHighScoresReturn('MENU');
             setScreen('HIGHSCORES');
           }}
           soundEnabled={soundEnabled}
@@ -1786,6 +1820,10 @@ export default function App() {
           isNewHighScore={gameOverStats.isNewHighScore}
           onNewGame={handleQuickPlayAgain}
           onBackToMenu={() => setScreen('MENU')}
+          onOpenLeaderboards={() => {
+            setHighScoresReturn('GAMEOVER');
+            setScreen('HIGHSCORES');
+          }}
           reason={gameOverReason}
         />
       )}
@@ -1794,8 +1832,12 @@ export default function App() {
       {screen === 'HIGHSCORES' && (
         <HighScoresModal
           onBack={() => {
-            setLastSoloResult(null);
-            setScreen('MENU');
+            if (highScoresReturn === 'GAMEOVER') {
+              setScreen('GAMEOVER');
+            } else {
+              setLastSoloResult(null);
+              setScreen('MENU');
+            }
           }}
           onPlayAgain={handleQuickPlay}
           onStartNextStudent={() => {
