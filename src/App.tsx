@@ -1566,7 +1566,7 @@ export default function App() {
   }, [frozenTiles, activeCeilingY, freePlaySettings.tileRadius]);
 
   return (
-    <main className="w-full h-[100dvh] max-h-[100dvh] flex flex-col items-center justify-between overflow-hidden select-none bg-slate-950 text-slate-100">
+    <main className="w-full h-[100dvh] max-h-[100dvh] flex flex-col items-center justify-between overflow-hidden select-none bg-slate-950 text-slate-100 safe-area-pad">
       {screen === 'MENU' && (
         <StartMenu
           onQuickPlay={handleQuickPlay}

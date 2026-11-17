@@ -9,10 +9,17 @@
     <meta property="og:description" content="Fast-paced hexagonal falling-letter word puzzle game. Spell words to clear hexagonal tiles before the stack reaches the top." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#020617" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Word Blitz" />
+    <link rel="icon" href="favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="manifest" href="manifest.webmanifest" />
     <style>
       /* Tablets/phones in landscape: the arena only fits in portrait, so ask to rotate.
          Touch-only devices, so laptops and desktops are never affected. */
@@ -21,7 +28,8 @@
         #rotate-overlay {
           display: flex; position: fixed; inset: 0; z-index: 2147483647;
           flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-          background: #020617; color: #f1f5f9; text-align: center; padding: 24px;
+          background: #020617; color: #f1f5f9; text-align: center;
+          padding: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
           font-family: Outfit, system-ui, sans-serif;
         }
         #root { visibility: hidden; }

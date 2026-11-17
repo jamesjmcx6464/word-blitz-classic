@@ -1,9 +1,0 @@
-{
-  "name": "Word Blitz Classic",
-  "short_name": "Word Blitz",
-  "start_url": "./",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#020617",
-  "theme_color": "#020617"
-}
