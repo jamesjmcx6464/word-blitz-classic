@@ -1,13 +1,14 @@
 import { chargeAfterWord as W, chargeAfterMiss as M, chargeMultiplier as X, chargePct as P, chargeTierFor } from '../src/utils/chargeBar';
 let fails = 0;
 const eq = (name: string, a: unknown, b: unknown) => { const ok = JSON.stringify(a) === JSON.stringify(b); if (!ok) fails++; console.log(ok ? 'PASS' : 'FAIL', name, a, ok ? '' : `expected ${b}`); };
-eq('beginner 4-letter x3 -> 105 (1.5x 5%)', W(W(W(0,4,'beginner'),4,'beginner'),4,'beginner'), 105);
+eq('beginner 4-letter x3 -> 210 (2x 10%)', W(W(W(0,4,'beginner'),4,'beginner'),4,'beginner'), 210);
+eq('beginner 3-letter x2 -> 100 (1.5x 0%)', W(W(0,3,'beginner'),3,'beginner'), 100);
 eq('mult at 105', X(105), 1.5);
 eq('pct at 105', P(105), 5);
 eq('normal 3-letter +10', W(0,3,'normal'), 10);
 eq('hard 3-letter +0', W(0,3,'hard'), 0);
 eq('2-letter 0', W(50,2,'beginner'), 50);
-eq('overflow: 2x 90% + 10-letter beginner -> 3x 90%', W(290,10,'beginner'), 490);
+eq('overflow: 2x 90% + 10-letter beginner -> 3.5x 50%', W(290,10,'beginner'), 550);
 eq('jump 2 stages mult', X(490), 3);
 eq('cap at 4x', W(580,7,'normal'), 600);
 eq('4x pct full', P(600), 100);

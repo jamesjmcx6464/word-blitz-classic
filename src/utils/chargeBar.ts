@@ -21,7 +21,7 @@ export function chargeTierFor(choice: DifficultyChoice): ChargeTier {
 /** Bar points gained per word length (index = letters; 10+ uses the last entry). */
 const GAIN: Record<ChargeTier, number[]> = {
   //          0  1  2   3   4   5   6    7    8    9   10+
-  beginner: [0, 0, 0, 20, 35, 50, 70, 100, 130, 160, 200],
+  beginner: [0, 0, 0, 50, 70, 100, 130, 160, 200, 230, 260],
   normal:   [0, 0, 0, 10, 25, 40, 60,  90, 115, 140, 180],
   hard:     [0, 0, 0,  0, 15, 30, 50,  80, 100, 120, 160],
 };
