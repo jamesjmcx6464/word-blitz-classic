@@ -3,6 +3,7 @@ import { useTapReady } from '../hooks/useTapReady';
 import { Trophy, Medal, Star, RotateCcw, Users, Home, Award } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ClassroomMatchState, ClassroomTeam } from '../types/game';
+import { WordChips } from './WordChips';
 
 interface ClassroomVictoryModalProps {
   matchState: ClassroomMatchState;
@@ -89,42 +90,50 @@ export const ClassroomVictoryModal: React.FC<ClassroomVictoryModalProps> = ({
               return (
                 <div
                   key={team.id}
-                  className={`p-4 rounded-2xl border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left transition-all ${
+                  className={`p-4 rounded-2xl border-2 flex flex-col gap-3 text-left transition-all ${
                     isWinner
                       ? 'bg-amber-400/10 border-amber-400 shadow-lg'
                       : 'bg-slate-800/80 border-slate-700/80'
                   }`}
                   style={!isWinner ? { borderColor: `${team.color}60` } : {}}
                 >
-                  <div className="flex items-center gap-3.5">
-                    {/* Rank pill */}
-                    <div
-                      className={`w-11 h-11 rounded-2xl border flex items-center justify-center font-display font-black text-base shrink-0 shadow-sm ${badge.bg}`}
-                    >
-                      {badge.label}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3.5">
+                      {/* Rank pill */}
+                      <div
+                        className={`w-11 h-11 rounded-2xl border flex items-center justify-center font-display font-black text-base shrink-0 shadow-sm ${badge.bg}`}
+                      >
+                        {badge.label}
+                      </div>
+
+                      {/* Team info */}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">{team.emoji}</span>
+                          <span className="font-display font-black text-xl text-white">
+                            {team.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-400 font-semibold mt-0.5">
+                          <span>{team.wordsFound.length} words found</span>
+                          {longest && <span>· Longest: &quot;{longest}&quot;</span>}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Team info */}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">{team.emoji}</span>
-                        <span className="font-display font-black text-xl text-white">
-                          {team.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-400 font-semibold mt-0.5">
-                        <span>{team.wordsFound.length} words found</span>
-                        {longest && <span>· Longest: &quot;{longest}&quot;</span>}
-                      </div>
+                    {/* Score */}
+                    <div className="self-end sm:self-center">
+                      <span className="font-mono font-black text-2xl text-amber-300">
+                        {team.score.toLocaleString()} pts
+                      </span>
                     </div>
                   </div>
 
-                  {/* Score */}
-                  <div className="self-end sm:self-center">
-                    <span className="font-mono font-black text-2xl text-amber-300">
-                      {team.score.toLocaleString()} pts
-                    </span>
-                  </div>
+                  <WordChips
+                    words={team.wordsFound}
+                    emptyText="No words this match"
+                    maxHeightClass="max-h-24 sm:max-h-32"
+                  />
                 </div>
               );
             })}

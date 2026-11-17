@@ -2,6 +2,7 @@ import React from 'react';
 import { useTapReady } from '../hooks/useTapReady';
 import { Play, Trophy, CheckCircle, Clock, Target, Flag } from 'lucide-react';
 import { ClassroomMatchState } from '../types/game';
+import { WordChips } from './WordChips';
 
 interface TurnTransitionModalProps {
   matchState: ClassroomMatchState;
@@ -77,18 +78,13 @@ export const TurnTransitionModal: React.FC<TurnTransitionModalProps> = ({
                 </span>
               </div>
 
-              {lastTurnSummary.wordsFound.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {lastTurnSummary.wordsFound.map((w) => (
-                    <span
-                      key={w.id}
-                      className="px-2.5 py-0.5 rounded-lg bg-slate-900 text-slate-200 text-xs font-mono font-bold uppercase border border-slate-700"
-                    >
-                      {w.word}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <div className="pt-1">
+                <WordChips
+                  words={lastTurnSummary.wordsFound}
+                  emptyText="No words this turn"
+                  maxHeightClass="max-h-28 sm:max-h-36"
+                />
+              </div>
             </div>
           ) : (
             <div className="py-2">

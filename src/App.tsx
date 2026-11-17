@@ -306,6 +306,7 @@ export default function App() {
         rank?: number;
         isNewHighScore?: boolean;
         reason?: string;
+        words?: Array<{ word: string; score?: number }>;
       }) => void;
     };
     w.__wbSetArenaStreak = (m: number) => {
@@ -323,8 +324,25 @@ export default function App() {
     };
     w.__wbShowGameOver = (opts = {}) => {
       setScore(opts.score ?? 1280);
-      setLongestWord(opts.longestWord ?? 'BLAST');
-      setTotalWordsCleared(opts.totalWords ?? 13);
+      if (opts.words) {
+        const entries: WordEntry[] = opts.words.map((w, i) => ({
+          id: `dev-${i}-${w.word}`,
+          word: w.word,
+          score: w.score ?? w.word.length * 10,
+          length: w.word.length,
+          timestamp: Date.now() + i,
+        }));
+        setWordHistory(entries);
+        const longest = entries.reduce(
+          (best, entry) => (entry.word.length > best.length ? entry.word : best),
+          ''
+        );
+        setLongestWord(opts.longestWord ?? longest);
+        setTotalWordsCleared(opts.totalWords ?? entries.length);
+      } else {
+        setLongestWord(opts.longestWord ?? 'BLAST');
+        setTotalWordsCleared(opts.totalWords ?? 13);
+      }
       setGameOverStats({
         rank: opts.rank ?? 2,
         isNewHighScore: opts.isNewHighScore ?? false,
@@ -1801,6 +1819,7 @@ export default function App() {
           finalScore={score}
           longestWord={longestWord}
           totalWords={totalWordsCleared}
+          wordEntries={wordHistory}
           rank={gameOverStats.rank}
           isNewHighScore={gameOverStats.isNewHighScore}
           onNewGame={handleQuickPlayAgain}
