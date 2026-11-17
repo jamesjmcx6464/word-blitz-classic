@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "build:dictionary": "python3 scripts/build-dictionary.py",
     "verify:dictionary": "tsx scripts/verify-dictionary.ts",
-    "test:charge": "tsx scripts/test-charge-bar.ts"
+    "test:charge": "tsx scripts/test-charge-bar.ts",
+    "test:seeds": "tsx scripts/test-seeds.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

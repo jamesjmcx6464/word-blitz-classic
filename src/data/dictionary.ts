@@ -46,6 +46,10 @@ const DAYS = [
 ];
 for (const d of DAYS) addWord(d);
 
+// Real words used as phonics seed words that the base list is missing.
+const PHONICS_EXTRAS = ['AIL'];
+for (const w of PHONICS_EXTRAS) addWord(w);
+
 export function isValidWord(word: string): boolean {
   const normalized = acceptWord(word ?? '');
   if (!normalized) return false;

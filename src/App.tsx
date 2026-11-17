@@ -46,6 +46,8 @@ import {
   chargeMultiplier,
   chargeStage,
   chargeTierFor,
+  chargeProfileFor,
+  chargeParFor,
   clampCharge,
 } from './utils/chargeBar';
 import {
@@ -1189,11 +1191,11 @@ export default function App() {
     // Group modes: a valid word outside the group counts as a miss.
     const appliedMult = chargeMultiplier(chargeRef.current);
     const inGroup = isStandardLetterMix(mix) || isWordInGroup(wordString, mix);
-    const tier = chargeTierFor(difficultyRef.current);
+    const chargeProfile = chargeProfileFor(difficultyRef.current, customSettingsRef.current);
     setChargeValue(
       inGroup
-        ? chargeAfterWord(chargeRef.current, wordString.length, tier)
-        : chargeAfterMiss(chargeRef.current, tier)
+        ? chargeAfterWord(chargeRef.current, wordString.length, chargeParFor(mix), chargeProfile)
+        : chargeAfterMiss(chargeRef.current, chargeProfile.tier)
     );
     const pointsAwarded = applyStreakScore(baseScore, appliedMult);
     const rare = countRareLetters(wordString) > 0;

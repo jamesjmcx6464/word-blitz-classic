@@ -35,6 +35,8 @@ const BLENDS_DIGRAPHS = [
   'ST', 'BL', 'CL', 'FL', 'PL', 'SL',
   'BR', 'CR', 'DR', 'FR', 'GR', 'TR',
   'SW', 'SM', 'SN', 'SP', 'SK', 'TW',
+  'GL', 'PR', 'SC', 'PH', // initial blends/digraph that were missing
+  'MP', 'ND', 'NT', 'NK', 'FT', 'LT', // final blends (jump, hand, tent, pink, gift, belt)
 ] as const;
 
 const SOUND_SUBSTRING: Partial<Record<SoundFocusId, string[]>> = {
@@ -54,6 +56,35 @@ const SOUND_SUBSTRING: Partial<Record<SoundFocusId, string[]>> = {
   th: ['TH'],
   ck: ['CK'],
   ng: ['NG'],
+};
+
+/**
+ * Phonics-first extras: words that make the category's sound with a closely
+ * related spelling, so a kid who spells a word that belongs to the sound isn't
+ * charged a miss. Spelling patterns stay the main rule; these only add words.
+ */
+const SOUND_EXTRA_PATTERNS: Partial<Record<SoundFocusId, RegExp[]>> = {
+  // ay = long a at the end of a word; EY spells the same sound in a few words.
+  ay: [/^(GREY|THEY|PREY|OBEY|HEY|WHEY|CONVEY|SURVEY|OSPREY)S?$/],
+  // or = /or/ sound: OAR (roar), OUR (four), and W + AR (war, warm).
+  or: [/OAR/, /^(FOUR|POUR|YOUR|YOURS|COURT|COURSE|SOURCE|MOURN|FOURTH|TOUR)S?$/, /^S?WAR(M|D|N|P|T)?S?$/],
+  // er/ir/ur = /er/ sound: EAR (earn, learn) and WOR (word, work).
+  er: [/^(EARN|EARNS|LEARN|LEARNS|YEARN|EARTH|HEARD|PEARL|PEARLS|SEARCH|EARLY|EARL)$/, /^WOR(D|K|M|LD|SE|ST|TH)S?$/],
+  // ng = /ng/ sound; NK is the same glued sound plus K (pink, bank).
+  ng: [/NK/],
+  // Final-e long vowels with the vowel right before the E (blue, pie, toe).
+  'u-e': [/[^AEIOU]UES?$/, /^(DUE|SUE|HUE|CUE|DUES|CUES)$/],
+  'i-e': [/^(PIE|TIE|LIE|DIE|VIE|PIES|TIES|LIES)$/],
+  'o-e': [/^(TOE|HOE|FOE|DOE|ROE|WOE|TOES|HOES|FOES)$/],
+};
+
+/** Short-vowel words that look like another pattern but make the short sound. */
+const SHORT_VOWEL_EXTRAS: Record<'A' | 'E' | 'I' | 'O' | 'U', Set<string>> = {
+  A: new Set(['HAVE']),
+  E: new Set(['HEAD', 'DEAD', 'DEAF', 'BREAD', 'THREAD', 'SPREAD', 'SWEAT', 'BREATH', 'SAID', 'SAYS', 'FRIEND']),
+  I: new Set(['GIVE', 'LIVE', 'GYM', 'MYTH']),
+  O: new Set([]),
+  U: new Set(['SON', 'TON', 'WON', 'SOME', 'COME', 'DONE', 'NONE', 'LOVE', 'DOVE', 'GLOVE', 'ABOVE', 'OVEN', 'MONTH', 'FRONT']),
 };
 
 export function normalizeWord(word: string): string {
@@ -79,8 +110,9 @@ export function applyStreakScore(base: number, multiplier: number): number {
 /** Magic e: vowel + one or more consonants + E at the end (e.g. cake, ate, name). */
 export function isMagicEWord(word: string, vowel: 'A' | 'I' | 'O' | 'U' | 'E'): boolean {
   const w = normalizeWord(word);
-  const re = new RegExp(`${vowel}[${CONSONANT}]+E$`);
-  return re.test(w);
+  if (new RegExp(`${vowel}[${CONSONANT}]+E$`).test(w)) return true;
+  // Plural / 3rd person: cakes, bikes, ropes (one consonant, not X, so BOXES stays out).
+  return new RegExp(`${vowel}[${CONSONANT.replace('X', '')}]ES$`).test(w);
 }
 
 /**
@@ -90,6 +122,7 @@ export function isMagicEWord(word: string, vowel: 'A' | 'I' | 'O' | 'U' | 'E'): 
 export function isShortVowelWord(word: string, vowel: 'A' | 'E' | 'I' | 'O' | 'U'): boolean {
   const w = normalizeWord(word);
   if (w.length < 2) return false;
+  if (SHORT_VOWEL_EXTRAS[vowel].has(w)) return true;
   const vowels = [...w].filter((ch) => VOWEL.includes(ch));
   if (vowels.length === 0 || vowels.some((v) => v !== vowel)) return false;
   if (new RegExp(`[${VOWEL}]{2}`).test(w)) return false;
@@ -121,6 +154,8 @@ export function isSoundFocusWord(word: string, sound: SoundFocusId): boolean {
     const v = sound.slice(-1).toUpperCase() as 'A' | 'E' | 'I' | 'O' | 'U';
     return isShortVowelWord(w, v);
   }
+  const extras = SOUND_EXTRA_PATTERNS[sound];
+  if (extras && extras.some((re) => re.test(w))) return true;
   if (sound === 'a-e') return isMagicEWord(w, 'A');
   if (sound === 'i-e') return isMagicEWord(w, 'I');
   if (sound === 'o-e') return isMagicEWord(w, 'O');
