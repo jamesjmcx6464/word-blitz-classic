@@ -21,13 +21,13 @@ export function chargeTierFor(choice: DifficultyChoice): ChargeTier {
 /** Bar points gained per word length (index = letters; 10+ uses the last entry). */
 const GAIN: Record<ChargeTier, number[]> = {
   //          0  1  2   3   4   5   6    7    8    9   10+
-  beginner: [0, 0, 0, 50, 70, 100, 130, 160, 200, 230, 260],
+  beginner: [0, 0, 0, 100, 150, 200, 250, 300, 350, 400, 600],
   normal:   [0, 0, 0, 10, 25, 40, 60,  90, 115, 140, 180],
   hard:     [0, 0, 0,  0, 15, 30, 50,  80, 100, 120, 160],
 };
 
 /** Bar points lost on a misspelling or out-of-group word. */
-export const MISS_PENALTY: Record<ChargeTier, number> = { beginner: 25, normal: 50, hard: 100 };
+export const MISS_PENALTY: Record<ChargeTier, number> = { beginner: 12, normal: 50, hard: 100 };
 
 export function chargeGainFor(length: number, tier: ChargeTier): number {
   const t = GAIN[tier];
@@ -60,7 +60,7 @@ export function chargeAfterWord(c: number, length: number, tier: ChargeTier): nu
 
 /**
  * Misspelling / out-of-group word.
- * Beginner −25, Normal −50 (borrowing from the previous stage below 0%).
+ * Beginner −12, Normal −50 (borrowing from the previous stage below 0%).
  * Hard: empty the bar and drop one stage (previous stage at 0%).
  */
 export function chargeAfterMiss(c: number, tier: ChargeTier): number {

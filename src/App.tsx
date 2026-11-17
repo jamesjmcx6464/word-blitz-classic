@@ -1167,7 +1167,6 @@ export default function App() {
       setIsShaking(true);
       setErrorMessage('Minimum 2 letters required');
       setTimeout(() => setIsShaking(false), 400);
-      applyChargeMiss();
       return;
     }
 
