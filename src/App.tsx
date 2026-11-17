@@ -36,13 +36,18 @@ import { getSavedDifficulty, saveDifficulty, getDifficultyConfig } from './utils
 import { computeTimePace } from './utils/timePace';
 import {
   applyStreakScore,
-  bumpStreak,
-  dropTwoStages,
   formatStreakMult,
-  halveStreak,
   isWordInGroup,
   streakStyle,
 } from './utils/groupStreak';
+import {
+  chargeAfterMiss,
+  chargeAfterWord,
+  chargeMultiplier,
+  chargeStage,
+  chargeTierFor,
+  clampCharge,
+} from './utils/chargeBar';
 import {
   CustomGameSettings,
   loadCustomSettings,
@@ -248,10 +253,11 @@ export default function App() {
   const classroomMatchRef = useRef<ClassroomMatchState | null>(null);
   classroomMatchRef.current = classroomMatch;
 
-  // Group-word streak (Letters presets / sound focus only). Reset each solo game; per team in classroom.
-  const [groupStreak, setGroupStreak] = useState<number>(1);
-  const groupStreakRef = useRef<number>(1);
-  const teamStreaksRef = useRef<number[]>([]);
+  // Charge-bar multiplier (all letter modes & difficulties). Charge = stage×100 + bar points (0–600).
+  // Reset each solo game; saved per team in classroom.
+  const [charge, setCharge] = useState<number>(0);
+  const chargeRef = useRef<number>(0);
+  const teamChargesRef = useRef<number[]>([]);
   const [streakFlash, setStreakFlash] = useState<'up' | 'down' | null>(null);
   const streakFlashTimerRef = useRef<number | null>(null);
 
@@ -261,23 +267,32 @@ export default function App() {
     streakFlashTimerRef.current = window.setTimeout(() => {
       setStreakFlash(null);
       streakFlashTimerRef.current = null;
-    }, 450);
+    }, 650);
   };
 
-  const setStreakValue = (next: number) => {
-    groupStreakRef.current = next;
-    setGroupStreak(next);
+  const setChargeValue = (next: number) => {
+    const prevStage = chargeStage(chargeRef.current);
+    const nextStage = chargeStage(next);
+    if (nextStage > prevStage) flashStreak('up');
+    else if (nextStage < prevStage) flashStreak('down');
+    chargeRef.current = next;
+    setCharge(next);
     if (classroomMatchRef.current) {
       const idx = classroomMatchRef.current.currentTeamIndex;
-      const copy = teamStreaksRef.current.slice();
+      const copy = teamChargesRef.current.slice();
       copy[idx] = next;
-      teamStreaksRef.current = copy;
+      teamChargesRef.current = copy;
     }
   };
 
-  const resetGroupStreak = () => {
-    groupStreakRef.current = 1;
-    setGroupStreak(1);
+  /** Misspelling / too short: lose charge per difficulty (Hard also drops a stage). */
+  const applyChargeMiss = () => {
+    setChargeValue(chargeAfterMiss(chargeRef.current, chargeTierFor(difficultyRef.current)));
+  };
+
+  const resetCharge = () => {
+    chargeRef.current = 0;
+    setCharge(0);
     setStreakFlash(null);
   };
 
@@ -286,18 +301,25 @@ export default function App() {
     if (!import.meta.env.DEV) return;
     const w = window as Window & {
       __wbSetArenaStreak?: (m: number) => void;
+      __wbSetCharge?: (c: number) => void;
       __wbSetSoloPlayer?: (name: string, logo: string) => void;
     };
     w.__wbSetArenaStreak = (m: number) => {
-      const next = Math.max(1, Math.min(4, Math.round(m * 2) / 2));
-      groupStreakRef.current = next;
-      setGroupStreak(next);
+      const next = clampCharge((Math.max(1, Math.min(4, Math.round(m * 2) / 2)) - 1) * 200);
+      chargeRef.current = next;
+      setCharge(next);
+    };
+    w.__wbSetCharge = (c: number) => {
+      const next = clampCharge(c);
+      chargeRef.current = next;
+      setCharge(next);
     };
     w.__wbSetSoloPlayer = (name: string, logo: string) => {
       setCurrentSoloPlayer({ name, logo });
     };
     return () => {
       delete w.__wbSetArenaStreak;
+      delete w.__wbSetCharge;
       delete w.__wbSetSoloPlayer;
     };
   }, []);
@@ -780,8 +802,8 @@ export default function App() {
     spawnTimerRef.current = 0;
     lastTimeRef.current = performance.now();
     resetLetterStreak();
-    resetGroupStreak();
-    teamStreaksRef.current = [];
+    resetCharge();
+    teamChargesRef.current = [];
 
     freePlaySpeedRef.current = overrides?.dropSpeed ?? freePlaySettingsRef.current.dropSpeed ?? preset.dropSpeed;
     spawnIntervalRef.current = overrides?.spawnIntervalMs ?? preset.spawnIntervalMs;
@@ -925,8 +947,8 @@ export default function App() {
     setClassroomMatch(initialState);
     classroomMatchRef.current = initialState;
     setWordHistory([]);
-    resetGroupStreak();
-    teamStreaksRef.current = [];
+    resetCharge();
+    teamChargesRef.current = [];
     setScreen('CLASSROOM_TURN_TRANSITION');
   };
 
@@ -977,9 +999,9 @@ export default function App() {
     lastTimeRef.current = performance.now();
     resetLetterStreak();
     {
-      const saved = teamStreaksRef.current[cur.currentTeamIndex] ?? 1;
-      groupStreakRef.current = saved;
-      setGroupStreak(saved);
+      const saved = teamChargesRef.current[cur.currentTeamIndex] ?? 0;
+      chargeRef.current = saved;
+      setCharge(saved);
       setStreakFlash(null);
     }
 
@@ -1017,8 +1039,8 @@ export default function App() {
     setClassroomMatch(freshMatch);
     classroomMatchRef.current = freshMatch;
     setWordHistory([]);
-    resetGroupStreak();
-    teamStreaksRef.current = [];
+    resetCharge();
+    teamChargesRef.current = [];
     setScreen('CLASSROOM_TURN_TRANSITION');
   };
 
@@ -1145,11 +1167,7 @@ export default function App() {
       setIsShaking(true);
       setErrorMessage('Minimum 2 letters required');
       setTimeout(() => setIsShaking(false), 400);
-      if (!isStandardLetterMix(letterDistRef.current)) {
-        const next = halveStreak(groupStreakRef.current);
-        if (next < groupStreakRef.current) flashStreak('down');
-        setStreakValue(next);
-      }
+      applyChargeMiss();
       return;
     }
 
@@ -1160,11 +1178,7 @@ export default function App() {
       setIsShaking(true);
       setErrorMessage(`"${wordString}" is not in dictionary`);
       setTimeout(() => setIsShaking(false), 400);
-      if (!isStandardLetterMix(letterDistRef.current)) {
-        const next = halveStreak(groupStreakRef.current);
-        if (next < groupStreakRef.current) flashStreak('down');
-        setStreakValue(next);
-      }
+      applyChargeMiss();
       return;
     }
 
@@ -1172,21 +1186,21 @@ export default function App() {
     bumpPaceOnWordEnter();
     const baseScore = getWordScore(wordString.length, wordString);
     const mix = letterDistRef.current;
-    const streakOn = !isStandardLetterMix(mix);
-    let appliedMult = 1;
-    if (streakOn) {
-      const inGroup = isWordInGroup(wordString, mix);
-      appliedMult = groupStreakRef.current;
-      const next = inGroup ? bumpStreak(appliedMult) : dropTwoStages(appliedMult);
-      if (next < appliedMult) flashStreak('down');
-      else if (next > appliedMult) flashStreak('up');
-      setStreakValue(next);
-    }
+    // Score at the current multiplier first, then charge the bar.
+    // Group modes: a valid word outside the group counts as a miss.
+    const appliedMult = chargeMultiplier(chargeRef.current);
+    const inGroup = isStandardLetterMix(mix) || isWordInGroup(wordString, mix);
+    const tier = chargeTierFor(difficultyRef.current);
+    setChargeValue(
+      inGroup
+        ? chargeAfterWord(chargeRef.current, wordString.length, tier)
+        : chargeAfterMiss(chargeRef.current, tier)
+    );
     const pointsAwarded = applyStreakScore(baseScore, appliedMult);
     const rare = countRareLetters(wordString) > 0;
     let popupText = `+${pointsAwarded}`;
     if (rare) popupText += ' rare';
-    if (streakOn && appliedMult > 1) popupText += ` streak x${formatStreakMult(appliedMult)}!`;
+    if (appliedMult > 1) popupText += ` x${formatStreakMult(appliedMult)}!`;
     else if (rare) popupText += '!';
 
     // Record in wordHistory
@@ -1227,7 +1241,7 @@ export default function App() {
     const avgX = liveSelected.reduce((sum, t) => sum + t.x, 0) / liveSelected.length;
     const avgY = liveSelected.reduce((sum, t) => sum + t.y, 0) / liveSelected.length;
 
-    const streakPaint = streakOn && appliedMult > 1 ? streakStyle(appliedMult) : null;
+    const streakPaint = appliedMult > 1 ? streakStyle(appliedMult) : null;
     const newScorePopup: FloatingScore = {
       id: 'score_' + Date.now(),
       text: popupText,
@@ -1635,9 +1649,6 @@ export default function App() {
           <GameHUD
             score={score}
             longestWord={longestWord}
-            streakActive={!isStandardLetterMix(letterDist)}
-            streakMultiplier={groupStreak}
-            streakFlash={streakFlash}
             onPause={() => setScreen('PAUSED')}
             soundEnabled={soundEnabled}
             onToggleSound={handleToggleSound}
@@ -1666,11 +1677,12 @@ export default function App() {
             errorMessage={errorMessage}
             isWide={viewMode === 'wide'}
             lastFoundWord={wordHistory[wordHistory.length - 1] ?? null}
-            streakActive={!isStandardLetterMix(letterDist)}
-            streakMultiplier={groupStreak}
+            streakMultiplier={chargeMultiplier(charge)}
+            groupMode={!isStandardLetterMix(letterDist)}
             isGroupWord={
               selectedTiles.length >= 2 &&
-              isWordInGroup(selectedTiles.map((tile) => tile.letter.value).join(''), letterDist)
+              (isStandardLetterMix(letterDist) ||
+                isWordInGroup(selectedTiles.map((tile) => tile.letter.value).join(''), letterDist))
             }
           />
 
@@ -1697,8 +1709,7 @@ export default function App() {
               wallRight={activeWallBounds.right}
               viewMode={viewMode}
               tileRadius={freePlaySettings.tileRadius}
-              streakActive={!isStandardLetterMix(letterDist)}
-              streakMultiplier={groupStreak}
+              charge={charge}
               streakFlash={streakFlash}
               letterHint={getGroundLetterHint(letterDist)}
               groundBadge={

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import gsap from 'gsap';
 import { HexTile, FloatingScore, ViewMode } from '../types/game';
 
@@ -10,7 +10,8 @@ export interface GroundPlayerBadge {
   onClick?: () => void;
 }
 import { isRareLetterDisplay } from '../data/dictionary';
-import { clampStreak, streakStyle } from '../utils/groupStreak';
+import { STREAK_STAGES, STREAK_COLORS, formatStreakMult } from '../utils/groupStreak';
+import { chargeStage, chargePct, MAX_STAGE } from '../utils/chargeBar';
 import { GroundLetterHint } from '../utils/letterDistributions';
 import {
   BOARD_WIDTH,
@@ -40,8 +41,8 @@ interface GameBoardProps {
   wallRight?: number;
   viewMode?: ViewMode;
   tileRadius?: number;
-  streakActive?: boolean;
-  streakMultiplier?: number;
+  /** Charge-bar value: stage × 100 + bar points (0–600). */
+  charge?: number;
   streakFlash?: 'up' | 'down' | null;
   groundBadge?: GroundPlayerBadge | null;
   letterHint?: GroundLetterHint | null;
@@ -64,8 +65,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   wallRight = boardWidth,
   viewMode,
   tileRadius = HEX_RADIUS,
-  streakActive = false,
-  streakMultiplier = 1,
+  charge = 0,
   streakFlash = null,
   groundBadge = null,
   letterHint = null,
@@ -234,33 +234,50 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   const hasSideWalls = wallLeft > 2 || wallRight < boardWidth - 2;
 
-  const streakStage = clampStreak(streakMultiplier);
-  const streakColor = streakStyle(streakStage);
-  const streakRgb = (() => {
-    const n = parseInt(streakColor.fill.slice(1), 16);
-    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-  })();
-  const isStreakMax = streakActive && streakStage === 4;
+  // Charge-bar floor: current stage colour fills left→right over the previous stage colour.
+  const stage = chargeStage(charge);
+  const pct = chargePct(charge);
+  const mult = STREAK_STAGES[stage];
+  const stageColor = STREAK_COLORS[mult].fill;
+  const prevColor = stage > 0 ? STREAK_COLORS[STREAK_STAGES[stage - 1]].fill : null;
+  const isStreakMax = stage === MAX_STAGE;
 
-  const streakVars = streakActive
-    ? ({
-        ['--arena-r' as string]: String(streakRgb.r),
-        ['--arena-g' as string]: String(streakRgb.g),
-        ['--arena-b' as string]: String(streakRgb.b),
-      } as React.CSSProperties)
-    : undefined;
+  // On stage-up the new colour starts empty and sweeps in (no backwards slide).
+  const [shownPct, setShownPct] = useState(pct);
+  const shownStageRef = useRef(stage);
+  useLayoutEffect(() => {
+    const prevStage = shownStageRef.current;
+    shownStageRef.current = stage;
+    if (stage > prevStage && pct > 0) {
+      setShownPct(0);
+      let raf2 = 0;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setShownPct(pct));
+      });
+      return () => {
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
+      };
+    }
+    setShownPct(pct);
+    return undefined;
+  }, [stage, pct]);
+
+  const groundH = boardHeight - groundY;
+  const fadeW = Math.max(40, boardWidth * 0.16);
+  // Fill rect spans [-W, W] with a soft fade on its right end; slide it so the fade lands at the fill edge.
+  const fillShift = (shownPct / 100) * (boardWidth + fadeW) - boardWidth;
+  const fadeStart = (2 * boardWidth - fadeW) / (2 * boardWidth);
+  const flameCount = Math.max(6, Math.round(boardWidth / 46));
 
   return (
     <div className="relative w-full h-full min-h-0 min-w-0 flex items-center justify-center select-none touch-none overflow-hidden [container-type:size]">
       <div
-        className={`relative overflow-hidden rounded-2xl ${
-          streakActive ? 'arena-streak-frame' : ''
-        } ${isStreakMax ? 'arena-streak-max' : ''}`}
+        className={`relative overflow-hidden rounded-2xl ${isStreakMax ? 'arena-streak-max' : ''}`}
         style={{
           aspectRatio: `${boardWidth} / ${boardHeight}`,
           width: `min(100%, calc(100cqh * ${boardWidth} / ${boardHeight}))`,
           height: `min(100%, calc(100cqw * ${boardHeight} / ${boardWidth}))`,
-          ...streakVars,
         }}
       >
       <svg
@@ -454,23 +471,84 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             x="0"
             y={groundY}
             width={boardWidth}
-            height={boardHeight - groundY}
+            height={groundH}
             fill="#0f172a"
             opacity="0.9"
           />
-          {!groundBadge && !letterHint && (
-            <text
-              x={boardWidth / 2}
-              y={groundY + (boardHeight - groundY) / 2 + 4}
-              textAnchor="middle"
-              fontSize="10"
-              fontWeight="600"
-              fill="#64748b"
-              className="tracking-widest uppercase select-none"
+        </g>
+
+        {/* Charge-bar floor (drawn before tiles so tiles and flames never cover letters) */}
+        <g pointerEvents="none" className="charge-floor">
+          <defs>
+            <linearGradient
+              id="chargeFillGrad"
+              gradientUnits="userSpaceOnUse"
+              x1={-boardWidth}
+              y1="0"
+              x2={boardWidth}
+              y2="0"
             >
-              Ground
-            </text>
+              <stop offset="0" stopColor={stageColor} stopOpacity="0.62" />
+              <stop offset={fadeStart} stopColor={stageColor} stopOpacity="0.62" />
+              <stop offset="1" stopColor={stageColor} stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="chargeFlameGrad" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stopColor="#c084fc" stopOpacity="0.95" />
+              <stop offset="0.45" stopColor="#e879f9" stopOpacity="0.75" />
+              <stop offset="1" stopColor="#fdf4ff" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {isStreakMax && (
+            <g className="charge-flames" aria-hidden="true">
+              {Array.from({ length: flameCount }, (_, i) => {
+                const w = boardWidth / flameCount;
+                const cx = w * (i + 0.5);
+                const h = 16 + ((i * 7) % 3) * 5;
+                const half = w * 0.55;
+                return (
+                  <path
+                    key={i}
+                    className="charge-flame"
+                    style={{ animationDelay: `${-((i * 173) % 900)}ms` }}
+                    d={`M ${cx - half} ${groundY + 2} Q ${cx - half * 0.35} ${groundY - h * 0.45} ${cx} ${groundY - h} Q ${cx + half * 0.35} ${groundY - h * 0.45} ${cx + half} ${groundY + 2} Z`}
+                    fill="url(#chargeFlameGrad)"
+                  />
+                );
+              })}
+            </g>
           )}
+          {prevColor && (
+            <rect x="0" y={groundY} width={boardWidth} height={groundH} fill={prevColor} opacity="0.34" />
+          )}
+          <rect
+            key={stage}
+            className="charge-fill"
+            x={-boardWidth}
+            y={groundY}
+            width={boardWidth * 2}
+            height={groundH}
+            fill="url(#chargeFillGrad)"
+            style={{ transform: `translateX(${fillShift}px)` }}
+          />
+          {streakFlash === 'up' && (
+            <rect
+              className="charge-flash"
+              x="0"
+              y={groundY}
+              width={boardWidth}
+              height={groundH}
+              fill={stageColor}
+            />
+          )}
+          <line
+            x1="0"
+            y1={groundY}
+            x2={boardWidth}
+            y2={groundY}
+            stroke={stageColor}
+            strokeOpacity={stage > 0 ? 0.9 : 0.55}
+            strokeWidth="3.5"
+          />
         </g>
 
         {/* Frozen Hexagons */}
@@ -730,12 +808,31 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           ))}
         </g>
       </svg>
-        {streakActive && (
-          <div className="arena-streak-wash" aria-hidden="true" />
-        )}
-        {streakActive && streakFlash === 'down' && (
+        {streakFlash === 'down' && (
           <div className="arena-streak-flash" aria-hidden="true" />
         )}
+        {/* Multiplier, big in the centre of the floor */}
+        <div
+          className="absolute left-0 right-0 pointer-events-none z-[2] flex items-center justify-center [container-type:size]"
+          style={{ top: `${(groundY / boardHeight) * 100}%`, bottom: 0 }}
+          role="status"
+          aria-label={`Multiplier ${formatStreakMult(mult)} times${
+            isStreakMax ? ', maxed out' : `, bar ${Math.round(pct)} percent`
+          }`}
+        >
+          <span
+            key={stage}
+            className={`charge-mult font-display font-black leading-none select-none ${
+              streakFlash === 'up' ? 'charge-mult-pop' : ''
+            }`}
+            style={{
+              color: '#ffffff',
+              ['--charge-glow' as string]: stageColor,
+            }}
+          >
+            {formatStreakMult(mult)}×
+          </span>
+        </div>
         {(groundBadge || letterHint) && (
           <div
             className="@container/ground absolute left-0 right-0 pointer-events-none z-[3] flex items-center justify-between gap-1.5 px-2 sm:px-3"
@@ -752,7 +849,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 onPointerDown={(e) => e.stopPropagation()}
                 aria-label={`${groundBadge.name}, ${groundBadge.caption}. Open scoreboard`}
                 className={`pointer-events-auto min-w-0 flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2 py-1 sm:py-1.5 rounded-2xl border-2 shadow-sm text-left cursor-pointer active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
-                  letterHint ? 'max-w-[46%]' : 'max-w-[58%]'
+                  letterHint ? 'max-w-[34%]' : 'max-w-[36%]'
                 }`}
                 style={{
                   backgroundColor: `${groundBadge.color ?? '#6366f1'}28`,
@@ -772,7 +869,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               ) : (
               <div
                 className={`min-w-0 flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2 py-1 sm:py-1.5 rounded-2xl border-2 shadow-sm ${
-                  letterHint ? 'max-w-[46%]' : 'max-w-[58%]'
+                  letterHint ? 'max-w-[34%]' : 'max-w-[36%]'
                 }`}
                 style={{
                   backgroundColor: `${groundBadge.color ?? '#6366f1'}28`,
@@ -795,8 +892,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             )}
             {letterHint ? (
               <div
-                className={`ml-auto min-w-0 text-right leading-tight ${
-                  groundBadge ? 'max-w-[50%]' : 'max-w-[80%]'
+                className={`ml-auto min-w-0 text-right leading-tight charge-ground-text ${
+                  'max-w-[34%]'
                 }`}
                 aria-label={
                   letterHint.kind === 'sound'
@@ -811,7 +908,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       <span
                         className="font-mono font-black text-[15px] tracking-wide lowercase align-middle"
                         style={{
-                          color: streakActive ? streakColor.fill : '#7dd3fc',
+                          color: '#e0f2fe',
                           WebkitTextStroke: '0.6px rgba(15,23,42,0.95)',
                           paintOrder: 'stroke fill',
                         }}
@@ -827,7 +924,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                         <span
                           className="font-mono font-black text-base sm:text-lg tracking-wide lowercase align-middle"
                           style={{
-                            color: streakActive ? streakColor.fill : '#7dd3fc',
+                            color: '#e0f2fe',
                             WebkitTextStroke: '0.6px rgba(15,23,42,0.95)',
                             paintOrder: 'stroke fill',
                           }}
@@ -845,7 +942,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 ) : (
                   <p
                     className="font-display font-black text-[11px] sm:text-sm leading-tight break-words"
-                    style={{ color: streakActive ? streakColor.fill : '#7dd3fc' }}
+                    style={{ color: '#e0f2fe' }}
                   >
                     {letterHint.title}
                   </p>

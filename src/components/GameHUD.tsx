@@ -11,15 +11,11 @@ import {
   Users,
 } from 'lucide-react';
 import { ViewMode, ClassroomMatchState } from '../types/game';
-import { StreakGauge } from './StreakGauge';
 import gsap from 'gsap';
 
 interface GameHUDProps {
   score: number;
   longestWord: string;
-  streakMultiplier?: number;
-  streakActive?: boolean;
-  streakFlash?: 'up' | 'down' | null;
   onPause: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
@@ -92,9 +88,6 @@ const RollingScore: React.FC<RollingScoreProps> = ({ value, prefix = '', classNa
 export const GameHUD: React.FC<GameHUDProps> = ({
   score,
   longestWord,
-  streakMultiplier = 1,
-  streakActive = false,
-  streakFlash = null,
   onPause,
   soundEnabled,
   onToggleSound,
@@ -155,9 +148,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <span className="hidden min-[520px]:inline px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-mono font-bold text-xs">
               +{classroomMatch.turnScoreGained} turn
             </span>
-          )}
-          {streakActive && (
-            <StreakGauge className="w-[52px] @[400px]/hud:w-[60px] @[520px]/hud:w-[68px]" multiplier={streakMultiplier} flash={streakFlash} />
           )}
         </div>
 
@@ -257,16 +247,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           </div>
         )}
 
-        {/* Group streak gauge (letter-mix reminder lives in the ground strip) */}
-        {streakActive && (
-          <div className="pl-1.5 @[400px]/hud:pl-2 sm:pl-3 border-l border-slate-800 flex items-center shrink-0">
-            <StreakGauge
-              className="w-[52px] @[400px]/hud:w-[60px] @[520px]/hud:w-[68px]"
-              multiplier={streakMultiplier}
-              flash={streakFlash}
-            />
-          </div>
-        )}
 
         {/* Longest word — hides on tighter HUD widths */}
         {isWide && longestWord && (

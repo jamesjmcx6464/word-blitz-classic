@@ -72,26 +72,6 @@ export function clampStreak(m: number): StreakMultiplier {
   return nearest;
 }
 
-export function streakStageIndex(m: number): number {
-  return STREAK_STAGES.indexOf(clampStreak(m));
-}
-
-export function bumpStreak(m: number): StreakMultiplier {
-  const i = streakStageIndex(m);
-  return STREAK_STAGES[Math.min(i + 1, STREAK_STAGES.length - 1)];
-}
-
-/** Halve, then round down to the nearest 0.5 step, not below 1. */
-export function halveStreak(m: number): StreakMultiplier {
-  return clampStreak(Math.max(1, Math.floor(m) * 0.5));
-}
-
-/** Drop two stages (−1.0), not below 1. */
-export function dropTwoStages(m: number): StreakMultiplier {
-  const i = streakStageIndex(m);
-  return STREAK_STAGES[Math.max(i - 2, 0)];
-}
-
 export function applyStreakScore(base: number, multiplier: number): number {
   return Math.floor(base * multiplier);
 }

@@ -178,74 +178,70 @@
 
 
 
-@keyframes streak-max-glow {
-  0%, 100% { filter: drop-shadow(0 0 3px #c084fc) drop-shadow(0 0 8px rgba(168, 85, 247, 0.55)); }
-  50% { filter: drop-shadow(0 0 6px #e9d5ff) drop-shadow(0 0 14px rgba(192, 132, 252, 0.85)); }
-}
-.animate-streak-max {
-  animation: streak-max-glow 1.2s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-streak-max { animation: none; filter: drop-shadow(0 0 5px #c084fc); }
-}
-
-
-/* Group-streak arena backlight: CSS on a static frame only (no SVG filters on tiles). */
-.arena-streak-frame {
-  --arena-r: 248;
-  --arena-g: 113;
-  --arena-b: 113;
-}
+/* Charge-bar multiplier: ROYGBIV floor + 4× flames. Transforms/opacity only (cheap on iPad). */
 .arena-streak-svg {
-  transition: border-color 500ms ease, box-shadow 500ms ease;
-}
-.arena-streak-frame .arena-streak-svg {
-  border-color: rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.6);
-  box-shadow:
-    0 25px 50px -12px rgb(0 0 0 / 0.45),
-    0 0 16px rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.38),
-    0 0 36px rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.2),
-    inset 0 0 32px rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.18);
-}
-.arena-streak-wash {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  border-radius: 1rem;
-  background: radial-gradient(
-    ellipse at 50% 50%,
-    transparent 32%,
-    rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.08) 58%,
-    rgba(var(--arena-r), var(--arena-g), var(--arena-b), 0.2) 100%
-  );
-  transition: background 500ms ease, opacity 500ms ease;
-  z-index: 1;
-}
-@keyframes arena-streak-max-wash {
-  0%, 100% { opacity: 0.72; }
-  50% { opacity: 1; }
+  transition: box-shadow 500ms ease;
 }
 @keyframes arena-streak-max-glow {
   0%, 100% {
     box-shadow:
       0 25px 50px -12px rgb(0 0 0 / 0.45),
-      0 0 16px rgba(192, 132, 252, 0.4),
-      0 0 36px rgba(192, 132, 252, 0.2),
-      inset 0 0 32px rgba(192, 132, 252, 0.2);
+      0 0 14px rgba(192, 132, 252, 0.35),
+      inset 0 0 24px rgba(192, 132, 252, 0.14);
   }
   50% {
     box-shadow:
       0 25px 50px -12px rgb(0 0 0 / 0.45),
-      0 0 26px rgba(192, 132, 252, 0.65),
-      0 0 56px rgba(192, 132, 252, 0.36),
-      inset 0 0 44px rgba(192, 132, 252, 0.32);
+      0 0 24px rgba(192, 132, 252, 0.6),
+      inset 0 0 36px rgba(192, 132, 252, 0.26);
   }
 }
-.arena-streak-max .arena-streak-wash {
-  animation: arena-streak-max-wash 1.2s ease-in-out infinite;
-}
 .arena-streak-max .arena-streak-svg {
-  animation: arena-streak-max-glow 1.2s ease-in-out infinite;
+  animation: arena-streak-max-glow 1.4s ease-in-out infinite;
+}
+.charge-fill {
+  transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes charge-flash {
+  0% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+.charge-flash {
+  opacity: 0;
+  animation: charge-flash 550ms ease-out forwards;
+}
+@keyframes charge-flame-flicker {
+  0%, 100% { transform: scaleY(0.75) scaleX(1); opacity: 0.75; }
+  30% { transform: scaleY(1.12) scaleX(0.92); opacity: 1; }
+  60% { transform: scaleY(0.88) scaleX(1.05); opacity: 0.85; }
+  80% { transform: scaleY(1.04) scaleX(0.96); opacity: 0.95; }
+}
+.charge-flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: charge-flame-flicker 900ms ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.charge-mult {
+  font-size: clamp(18px, 62cqh, 56px);
+  letter-spacing: 0.02em;
+  -webkit-text-stroke: 0.08em rgba(15, 23, 42, 0.95);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 10px var(--charge-glow, transparent),
+    0 2px 3px rgba(2, 6, 23, 0.9);
+}
+@keyframes charge-mult-pop {
+  0% { transform: scale(1.45); }
+  60% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+.charge-mult-pop {
+  display: inline-block;
+  animation: charge-mult-pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.charge-ground-text {
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.95), 0 0 6px rgba(2, 6, 23, 0.8);
 }
 @keyframes arena-streak-drop-flash {
   0% { opacity: 1; }
@@ -263,19 +259,23 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .arena-streak-svg,
-  .arena-streak-wash {
+  .charge-fill {
     transition: none;
   }
-  .arena-streak-max .arena-streak-wash,
   .arena-streak-max .arena-streak-svg {
     animation: none;
-  }
-  .arena-streak-max .arena-streak-svg {
     box-shadow:
       0 25px 50px -12px rgb(0 0 0 / 0.45),
-      0 0 20px rgba(192, 132, 252, 0.5),
-      0 0 40px rgba(192, 132, 252, 0.25),
-      inset 0 0 36px rgba(192, 132, 252, 0.24);
+      0 0 18px rgba(192, 132, 252, 0.45),
+      inset 0 0 30px rgba(192, 132, 252, 0.2);
+  }
+  .charge-flame {
+    animation: none;
+    opacity: 0.85;
+  }
+  .charge-flash,
+  .charge-mult-pop {
+    animation: none;
   }
   .arena-streak-flash {
     animation: none;

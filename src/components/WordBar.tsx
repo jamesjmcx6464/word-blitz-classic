@@ -13,7 +13,8 @@ interface WordBarProps {
   errorMessage: string | null;
   isWide?: boolean;
   lastFoundWord?: WordEntry | null;
-  streakActive?: boolean;
+  /** Word-group letter mix (shows "group word" hint). */
+  groupMode?: boolean;
   streakMultiplier?: number;
   isGroupWord?: boolean;
 }
@@ -35,20 +36,20 @@ export const WordBar: React.FC<WordBarProps> = ({
   errorMessage,
   isWide = false,
   lastFoundWord = null,
-  streakActive = false,
+  groupMode = false,
   streakMultiplier = 1,
   isGroupWord = false,
 }) => {
   const wordString = selectedTiles.map((t) => t.letter.value).join('');
   const letterCount = wordString.length;
   const baseScore = letterCount >= 2 ? getWordScore(letterCount, wordString) : 0;
-  const showStreakPreview = streakActive && isGroupWord && letterCount >= 2;
+  const showStreakPreview = isGroupWord && letterCount >= 2;
   const potentialScore =
     showStreakPreview && streakMultiplier > 1
       ? applyStreakScore(baseScore, streakMultiplier)
       : baseScore;
   const streakColor = streakStyle(streakMultiplier).fill;
-  const trayBorder = showStreakPreview
+  const trayBorder = showStreakPreview && (groupMode || streakMultiplier > 1)
     ? { borderColor: streakColor, boxShadow: `0 0 0 1px ${streakColor}55` }
     : undefined;
   const isValidLength = letterCount >= 2;
@@ -199,8 +200,8 @@ export const WordBar: React.FC<WordBarProps> = ({
       <span className="text-amber-300 text-xs sm:text-sm font-bold truncate max-w-full leading-tight">
         +{potentialScore} points if you press GO!
         {showStreakPreview && streakMultiplier > 1
-          ? ` · streak x${formatStreakMult(streakMultiplier)}`
-          : showStreakPreview
+          ? ` · x${formatStreakMult(streakMultiplier)}`
+          : showStreakPreview && groupMode
             ? ' · group word'
             : ''}
       </span>
