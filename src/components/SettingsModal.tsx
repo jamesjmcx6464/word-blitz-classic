@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, RotateCcw, Save, SlidersHorizontal, BookOpen } from 'lucide-react';
+import { X, Check, RotateCcw, SlidersHorizontal, BookOpen } from 'lucide-react';
 import {
   CustomGameSettings,
   CUSTOM_OPTIONS,
@@ -90,8 +90,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [draft, setDraft] = useState<CustomGameSettings>(() => saved ?? DEFAULT_CUSTOM_SETTINGS);
   const [confirmReset, setConfirmReset] = useState<boolean>(false);
 
-  const set = <K extends keyof CustomGameSettings>(key: K, val: CustomGameSettings[K]) =>
-    setDraft((prev) => ({ ...prev, [key]: val }));
+  // Auto-save: every change is stored right away (no Save button).
+  const set = <K extends keyof CustomGameSettings>(key: K, val: CustomGameSettings[K]) => {
+    const next = { ...draft, [key]: val };
+    setDraft(next);
+    onSave(next);
+  };
 
   const handleReset = () => {
     onReset();
@@ -127,7 +131,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <span className="text-xs font-semibold text-fuchsia-300/90 block truncate">
                 {tab === 'game' ? (
                   <>
-                    Save to play them as the <strong>Custom</strong> difficulty
+                    Saved as you go, played as the <strong>Custom</strong> difficulty
                   </>
                 ) : (
                   <>Used in every difficulty, saved as you tap</>
@@ -361,14 +365,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset to defaults</span>
               </button>
-              <button
-                type="button"
-                onClick={() => onSave(draft)}
-                className="min-h-[48px] px-5 rounded-2xl bg-gradient-to-r from-fuchsia-500 to-purple-600 hover:from-fuchsia-400 hover:to-purple-500 text-white font-display font-black text-sm flex items-center gap-2 shadow-lg shadow-fuchsia-500/25 active:scale-95 transition-all cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save</span>
-              </button>
+              <span className="text-[11px] text-slate-500 font-medium">{saved ? 'Saved as you go' : 'Changes save automatically'}</span>
             </>
           )}
         </div>

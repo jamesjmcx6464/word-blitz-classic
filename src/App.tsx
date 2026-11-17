@@ -366,8 +366,8 @@ export default function App() {
     saveCustomSettings(next);
     setCustomSettings(next);
     customSettingsRef.current = next;
-    handleChangeDifficulty('custom');
-    setIsSettingsOpen(false);
+    // Auto-saved as each control changes; changing any control selects Custom.
+    if (difficultyRef.current !== 'custom') handleChangeDifficulty('custom');
   };
 
   // Settings screen: forget custom settings (Custom option disappears)
