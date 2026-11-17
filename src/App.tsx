@@ -257,10 +257,9 @@ export default function App() {
   classroomMatchRef.current = classroomMatch;
 
   // Charge-bar multiplier (all letter modes & difficulties). Charge = stage×100 + bar points (0–600).
-  // Reset each solo game; saved per team in classroom.
+  // Reset each solo game and at the start of every classroom team turn.
   const [charge, setCharge] = useState<number>(0);
   const chargeRef = useRef<number>(0);
-  const teamChargesRef = useRef<number[]>([]);
   const [streakFlash, setStreakFlash] = useState<'up' | 'down' | null>(null);
   const streakFlashTimerRef = useRef<number | null>(null);
 
@@ -280,12 +279,6 @@ export default function App() {
     else if (nextStage < prevStage) flashStreak('down');
     chargeRef.current = next;
     setCharge(next);
-    if (classroomMatchRef.current) {
-      const idx = classroomMatchRef.current.currentTeamIndex;
-      const copy = teamChargesRef.current.slice();
-      copy[idx] = next;
-      teamChargesRef.current = copy;
-    }
   };
 
   /** Misspelling / too short: lose charge per difficulty (Hard also drops a stage). */
@@ -838,7 +831,6 @@ export default function App() {
     lastTimeRef.current = performance.now();
     resetLetterStreak();
     resetCharge();
-    teamChargesRef.current = [];
 
     freePlaySpeedRef.current = overrides?.dropSpeed ?? freePlaySettingsRef.current.dropSpeed ?? preset.dropSpeed;
     spawnIntervalRef.current = overrides?.spawnIntervalMs ?? preset.spawnIntervalMs;
@@ -983,7 +975,6 @@ export default function App() {
     classroomMatchRef.current = initialState;
     setWordHistory([]);
     resetCharge();
-    teamChargesRef.current = [];
     setScreen('CLASSROOM_TURN_TRANSITION');
   };
 
@@ -1033,12 +1024,7 @@ export default function App() {
     isSpawningRef.current = false;
     lastTimeRef.current = performance.now();
     resetLetterStreak();
-    {
-      const saved = teamChargesRef.current[cur.currentTeamIndex] ?? 0;
-      chargeRef.current = saved;
-      setCharge(saved);
-      setStreakFlash(null);
-    }
+    resetCharge();
 
     setScreen('PLAYING');
 
@@ -1075,7 +1061,6 @@ export default function App() {
     classroomMatchRef.current = freshMatch;
     setWordHistory([]);
     resetCharge();
-    teamChargesRef.current = [];
     setScreen('CLASSROOM_TURN_TRANSITION');
   };
 
