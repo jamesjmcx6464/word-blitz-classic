@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import {
   HexTile,
   FloatingScore,
@@ -304,6 +304,19 @@ export default function App() {
 
 
   const [isClassroomScoreboardOpen, setIsClassroomScoreboardOpen] = useState<boolean>(false);
+
+  /** Close popups that must not sit on top of the next screen (not Solo/Team/Settings, which can open as we return to MENU). */
+  const closeAllOverlays = useCallback(() => {
+    setIsWordHistoryOpen(false);
+    setIsClassroomScoreboardOpen(false);
+  }, []);
+
+  const screenForOverlaysRef = useRef(screen);
+  useLayoutEffect(() => {
+    if (screenForOverlaysRef.current === screen) return;
+    screenForOverlaysRef.current = screen;
+    closeAllOverlays();
+  }, [screen, closeAllOverlays]);
   const [activeTurnWords, setActiveTurnWords] = useState<WordEntry[]>([]);
   const activeTurnWordsRef = useRef<WordEntry[]>(activeTurnWords);
   activeTurnWordsRef.current = activeTurnWords;
@@ -408,8 +421,8 @@ export default function App() {
   const boardWidthRef = useRef<number>(boardWidth);
   boardWidthRef.current = boardWidth;
 
-  // Dynamically observe board container size so the game area stretches and speed scales proportionally
-  useEffect(() => {
+  // Measure the board container before paint (avoids a viewBox jump on PLAYING mount) and keep it in sync on resize
+  useLayoutEffect(() => {
     const updateDimensions = () => {
       const el = boardContainerRef.current;
       if (!el) {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useLayoutEffect, useRef } from 'react';
 import {
   User,
   UserPlus,
@@ -48,7 +48,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
   hasCustomSettings,
   isWide,
 }) => {
-  const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>([]);
+  const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>(() => getRegisteredPlayers());
   const [selectedExistingPlayer, setSelectedExistingPlayer] = useState<RegisteredPlayer | null>(null);
   const [isAddingNew, setIsAddingNew] = useState<boolean>(true);
   const [confirmDelete, setConfirmDelete] = useState<boolean>(false);
@@ -77,18 +77,25 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
     didDrag: false,
   });
 
-  // Load registered players & reset inputs whenever opened
-  useEffect(() => {
-    if (isOpen) {
-      const players = getRegisteredPlayers();
-      setRegisteredPlayers(players);
-      setSelectedExistingPlayer(null);
-      setIsAddingNew(true);
-      setPlayerName('');
-      setSelectedLogo('');
-      setSelectedCategory('all');
-    }
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Load registered players & reset inputs whenever opened, before paint
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    setRegisteredPlayers(getRegisteredPlayers());
+    setSelectedExistingPlayer(null);
+    setIsAddingNew(true);
+    setConfirmDelete(false);
+    setPlayerName('');
+    setSelectedLogo('');
+    setSelectedCategory('all');
   }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (isOpen && isAddingNew) {
+      nameInputRef.current?.focus({ preventScroll: true });
+    }
+  }, [isOpen, isAddingNew]);
 
   // Read currently claimed logos from registered players + Solo leaderboard
   const claimedMap = useMemo(() => {
@@ -374,8 +381,8 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
                     <User className="w-5 h-5" />
                   </div>
                   <input
+                    ref={nameInputRef}
                     type="text"
-                    autoFocus
                     maxLength={20}
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
