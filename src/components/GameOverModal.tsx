@@ -50,9 +50,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   return (
     <div
       data-armed={tapReady ? 'true' : 'false'}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md select-none animate-fade-in"
+      className="game-over-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md select-none animate-fade-in overflow-hidden"
     >
-      <div className="w-full max-w-md max-h-[calc(100dvh-2rem)] bg-slate-900 border-2 border-slate-700/80 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col items-center text-center text-slate-100 overflow-hidden">
+      <div className="game-over-card w-full max-w-md bg-slate-900 border-2 border-slate-700/80 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col items-center text-center text-slate-100 overflow-hidden min-h-0">
         {isNewHighScore ? (
           <div className="mb-3 px-3.5 py-1.5 rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-300 text-xs sm:text-sm font-black flex items-center gap-2 tracking-wide shrink-0">
             <Sparkles className="w-4 h-4 text-amber-400 fill-amber-400" />
