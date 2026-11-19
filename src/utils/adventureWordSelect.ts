@@ -163,3 +163,61 @@ export function buildLetterTray(words: AdventureLexiconEntry[], seed: number): s
   }
   return shuffle(letters, rand);
 }
+
+/** Letters a round needs: the full multiset of its words' letters (unshuffled). */
+export function roundLetterMultiset(words: AdventureLexiconEntry[]): string[] {
+  const out: string[] = [];
+  for (const w of words) for (const ch of w.word.toUpperCase()) out.push(ch);
+  return out;
+}
+
+export interface RoundTileSpec {
+  id: string;
+  letter: string;
+}
+
+/**
+ * Checks a round's tile set before anything drops: the count matches the
+ * total letters, every word can be spelled from the tiles, and ids are unique.
+ * Returns a list of problems (empty = valid).
+ */
+export function validateRoundTiles(words: AdventureLexiconEntry[], tiles: RoundTileSpec[]): string[] {
+  const problems: string[] = [];
+  const need = roundLetterMultiset(words);
+  if (tiles.length !== need.length) problems.push(`count ${tiles.length} != ${need.length}`);
+  const ids = new Set(tiles.map((t) => t.id));
+  if (ids.size !== tiles.length) problems.push('duplicate tile ids');
+  const have = new Map<string, number>();
+  for (const t of tiles) have.set(t.letter, (have.get(t.letter) ?? 0) + 1);
+  // Every word on its own, and all words together (exact multiset)
+  for (const w of words) {
+    const want = new Map<string, number>();
+    for (const ch of w.word.toUpperCase()) want.set(ch, (want.get(ch) ?? 0) + 1);
+    for (const [ch, n] of want) if ((have.get(ch) ?? 0) < n) problems.push(`cannot spell ${w.word}`);
+  }
+  const needCounts = new Map<string, number>();
+  for (const ch of need) needCounts.set(ch, (needCounts.get(ch) ?? 0) + 1);
+  for (const [ch, n] of needCounts) if (have.get(ch) !== n) problems.push(`letter ${ch}: ${have.get(ch) ?? 0} != ${n}`);
+  for (const ch of have.keys()) if (!needCounts.has(ch)) problems.push(`extra letter ${ch}`);
+  return problems;
+}
+
+/**
+ * Builds every tile for a round up front (shuffled with the round's seed),
+ * validates it, and rebuilds if anything is off. Never returns a short set.
+ */
+export function buildRoundTiles(
+  words: AdventureLexiconEntry[],
+  seed: number,
+  idPrefix: string
+): RoundTileSpec[] {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const letters = buildLetterTray(words, seed + attempt * 7919);
+    const tiles = letters.map((letter, i) => ({ id: `${idPrefix}-${i}`, letter }));
+    const problems = validateRoundTiles(words, tiles);
+    if (problems.length === 0) return tiles;
+    console.warn('[adventure] round tiles failed validation, rebuilding', problems);
+  }
+  // Last resort: the plain, unshuffled multiset (always valid by construction)
+  return roundLetterMultiset(words).map((letter, i) => ({ id: `${idPrefix}-${i}`, letter }));
+}

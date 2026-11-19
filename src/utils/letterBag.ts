@@ -167,6 +167,11 @@ export function resetLetterStreak(): void {
   seedQueue = [];
 }
 
+/** A restricted table (e.g. a lesson's letters) may have no vowels or no consonants at all. */
+function hasWeighted(table: LetterWeightTable, vowel: boolean): boolean {
+  return table.some((i) => i.weight > 0 && VOWELS.has(i.letter) === vowel);
+}
+
 function drawFrom(pool: LetterWeightTable): string {
   const usable = pool.filter((item) => item.weight > 0);
   const total = usable.reduce((sum, item) => sum + item.weight, 0);
@@ -231,9 +236,9 @@ export function drawLetter(opts: LetterDrawOptions): LetterTileInfo {
   let chosen: string;
   if (seedQueue.length > 0) {
     chosen = seedQueue.shift() as string;
-  } else if (streakLimit > 0 && streakCount >= streakLimit && streakKind === 'vowel') {
+  } else if (streakLimit > 0 && streakCount >= streakLimit && streakKind === 'vowel' && hasWeighted(table, false)) {
     chosen = drawFrom(table.filter((i) => !VOWELS.has(i.letter)));
-  } else if (streakLimit > 0 && streakCount >= streakLimit && streakKind === 'consonant') {
+  } else if (streakLimit > 0 && streakCount >= streakLimit && streakKind === 'consonant' && hasWeighted(table, true)) {
     chosen = drawFrom(table.filter((i) => VOWELS.has(i.letter)));
   } else {
     chosen = drawFrom(table);

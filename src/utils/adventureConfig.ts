@@ -1,6 +1,7 @@
 /** Adventure Mode tuning knobs (Spark MVP). */
 
-export const ADVENTURE_PASS_THRESHOLD = 1; // 1 = 100% correct Enters required to pass a vowel level
+/** Wrong Enters a vowel level forgives: at most this many and it still passes; one more fails it. */
+export const ADVENTURE_MAX_MISSES = 1;
 
 export const ADVENTURE_WORDS_PER_ROUND = 4;
 export const ADVENTURE_ROUNDS_PER_LEVEL = 3;

@@ -401,6 +401,9 @@ export default function App() {
   activeTurnWordsRef.current = activeTurnWords;
 
   const handleUpdateFreePlaySettings = (newSettings: FreePlaySettings) => {
+    // Bonus Blitz runs on fixed settings: the player's settings never change it, and
+    // its temporary settings are never saved over the player's own.
+    if (bonusRunRef.current) return;
     setFreePlaySettings(newSettings);
     freePlaySettingsRef.current = newSettings;
     try {
@@ -414,6 +417,7 @@ export default function App() {
   };
 
   const handleResetFreePlaySettings = () => {
+    if (bonusRunRef.current) return;
     setFreePlaySettings(DEFAULT_FREE_PLAY_SETTINGS);
     freePlaySettingsRef.current = DEFAULT_FREE_PLAY_SETTINGS;
     freePlaySpeedRef.current = DEFAULT_FREE_PLAY_SETTINGS.dropSpeed;
@@ -425,6 +429,7 @@ export default function App() {
   };
 
   const handleChangeDifficulty = (level: DifficultyChoice) => {
+    if (bonusRunRef.current) return;
     setDifficulty(level);
     difficultyRef.current = level;
     saveDifficulty(level);
@@ -460,6 +465,7 @@ export default function App() {
   };
 
   const handleChangeLetterDist = (next: LetterDistributionSettings) => {
+    if (bonusRunRef.current) return;
     setLetterDist(next);
     letterDistRef.current = next;
     saveLetterDistribution(next);
@@ -989,6 +995,14 @@ export default function App() {
       bonus: true,
     });
   };
+
+  // Leaving a bonus Blitz by any route (menu, leaderboards, classroom...) puts the
+  // player's own difficulty, letter mix and settings back before anything else runs.
+  useEffect(() => {
+    if (screen === 'PLAYING' || screen === 'PAUSED' || screen === 'GAMEOVER') return;
+    if (bonusRunRef.current || preBonusRef.current) restoreAfterBonus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen]);
 
   const handleBonusBackToMap = () => {
     restoreAfterBonus();

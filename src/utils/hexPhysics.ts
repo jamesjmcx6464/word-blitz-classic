@@ -109,13 +109,37 @@ export function findLandingY(
   const hexH = (Math.sqrt(3) * radius) / 2;
   // Ground is a flat line at groundY. Every hex resting on ground has center at groundY - hexH
   let targetY = groundY - hexH;
+  let overlapping = false;
 
   for (const obs of obstacles) {
     const contactY = getHexContactY(fallingX, obs, radius);
-    if (contactY !== null && contactY >= startY - 4.0) {
+    if (contactY === null) continue;
+    if (contactY >= startY - 4.0) {
       if (contactY < targetY) {
         targetY = contactY;
       }
+    } else if (obs.y >= startY - 0.5) {
+      // Already overlapping a tile at or below it (e.g. two tiles released into the
+      // same spot after a frame stall). Never pass through: land on top of it.
+      overlapping = true;
+      if (contactY < targetY) targetY = contactY;
+    }
+  }
+
+  if (overlapping) {
+    // Snapping up can push it into a tile above; keep moving up to the nearest free spot.
+    for (let guard = 0; guard < obstacles.length; guard++) {
+      let moved = false;
+      for (const obs of obstacles) {
+        const contactY = getHexContactY(fallingX, obs, radius);
+        if (contactY === null) continue;
+        const inside = targetY > contactY + 0.01 && targetY < obs.y + (obs.y - contactY) - 0.01;
+        if (inside && obs.y < targetY + 0.01 && contactY < targetY) {
+          targetY = contactY;
+          moved = true;
+        }
+      }
+      if (!moved) break;
     }
   }
 

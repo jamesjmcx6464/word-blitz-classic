@@ -11,15 +11,17 @@ import {
 import { AdventureLexiconEntry } from '../../data/adventureLexicon';
 import {
   ADVENTURE_BOSS_MAX_MISSES,
-  ADVENTURE_PASS_THRESHOLD,
+  ADVENTURE_MAX_MISSES,
   ADVENTURE_ROUNDS_PER_LEVEL,
   AdventureLevelDef,
 } from '../../utils/adventureConfig';
 import { playWordAudio, stopWordAudio } from '../../utils/adventureAudio';
 import {
-  buildLetterTray,
   buildLevelRounds,
+  buildRoundTiles,
+  roundLetterMultiset,
 } from '../../utils/adventureWordSelect';
+import { findOverlaps, sameMultiset } from '../../utils/adventureDrop';
 import { GameBoard } from '../GameBoard';
 import { HexTile } from '../../types/game';
 import { HexDropGeometry, useHexDropBoard } from '../../hooks/useHexDropBoard';
@@ -99,7 +101,7 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
     return () => ro.disconnect();
   }, [phase]);
 
-  const { frozenTiles, fallingTiles, dropLetters, clearTiles } = useHexDropBoard(geometry);
+  const { frozenTiles, fallingTiles, settled, dropLetters, clearTiles } = useHexDropBoard(geometry);
   const allTiles = useMemo(() => [...frozenTiles, ...fallingTiles], [frozenTiles, fallingTiles]);
   const selectedTiles = useMemo(
     () =>
@@ -113,11 +115,15 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
   const isBoss = level.kind === 'boss';
   const spelled = selectedTiles.map((t) => t.letter.display).join('');
 
+  // Unique per drop so React keys never collide across rounds or replays.
+  const dropCountRef = useRef(0);
   const setupRound = useCallback(
     (idx: number, roundSeed: number) => {
       const round = rounds[idx] ?? [];
-      const letters = buildLetterTray(round, roundSeed);
-      dropLetters(letters, roundSeed, `t${idx}`);
+      // All tiles are built and validated off screen before anything drops.
+      dropCountRef.current++;
+      const tiles = buildRoundTiles(round, roundSeed, `d${dropCountRef.current}-r${idx}`);
+      dropLetters(tiles, roundSeed);
       setSelectedIds([]);
       setDoneIds(new Set());
       setFeedback(null);
@@ -143,6 +149,42 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
   }, [phase, onRoundActiveChange]);
 
   const remainingCards = cards.filter((c) => !doneIds.has(c.id));
+
+  // Dev-only: once the board settles it must still hold every letter not yet used.
+  useEffect(() => {
+    if (!import.meta.env.DEV || !settled || phase !== 'playing') return;
+    const want = roundLetterMultiset(remainingCards);
+    const have = allTiles.filter((t) => !t.isClearing).map((t) => t.letter.display);
+    if (!sameMultiset(want, have)) {
+      console.error('[adventure] board letters do not match remaining words', { want, have });
+    }
+    const h = (Math.sqrt(3) * (geometry?.tileRadius ?? 0)) / 2;
+    const bad = allTiles.filter((t) => geometry && (t.y - h < -0.5 || t.y + h > geometry.groundY + 0.5));
+    if (bad.length) console.error('[adventure] tiles outside the board', bad);
+    const overlaps = findOverlaps(allTiles.filter((t) => !t.isClearing), geometry?.tileRadius ?? 0);
+    if (overlaps.length) console.error('[adventure] tiles overlap / share a cell', overlaps);
+  }, [settled, allTiles, remainingCards, phase, geometry]);
+
+  // Dev-only read-only hook for playtests.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as Window & { __wbAdventureState?: () => unknown };
+    w.__wbAdventureState = () => ({
+      level: level.id,
+      roundIndex,
+      phase,
+      settled,
+      words: cards.map((c) => c.word),
+      remaining: remainingCards.map((c) => c.word),
+      groundY: geometry?.groundY,
+      boardHeight: geometry?.boardHeight,
+      tileRadius: geometry?.tileRadius,
+      tiles: allTiles.map((t) => ({ id: t.id, letter: t.letter.display, x: t.x, y: t.y, frozen: t.isFrozen, clearing: !!t.isClearing })),
+    });
+    return () => {
+      delete w.__wbAdventureState;
+    };
+  });
 
   const handleCardTap = (entry: AdventureLexiconEntry) => {
     if (doneIds.has(entry.id) || phase !== 'playing') return;
@@ -193,17 +235,9 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
       if (nextDone.size >= cards.length) {
         // Round complete
         if (roundIndex + 1 >= ADVENTURE_ROUNDS_PER_LEVEL) {
-          const accuracy =
-            misses === 0 ? 1 : Math.max(0, 1 - misses / (cards.length * ADVENTURE_ROUNDS_PER_LEVEL));
-          // Pass rules
-          if (isBoss) {
-            const bossPass = misses < ADVENTURE_BOSS_MAX_MISSES;
-            setTimeout(() => finishLevel(bossPass), 450);
-          } else {
-            const vowelPass = misses === 0 && accuracy >= ADVENTURE_PASS_THRESHOLD;
-            // 100% = no wrong Enters
-            setTimeout(() => finishLevel(misses === 0 && vowelPass), 450);
-          }
+          // Pass rules: Boss forgives up to 2 misses (3rd fails); vowel levels forgive ADVENTURE_MAX_MISSES.
+          const didPass = isBoss ? misses < ADVENTURE_BOSS_MAX_MISSES : misses <= ADVENTURE_MAX_MISSES;
+          setTimeout(() => finishLevel(didPass), 450);
         } else {
           setTimeout(() => {
             const next = roundIndex + 1;
@@ -217,10 +251,15 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
     } else {
       const nextMisses = misses + 1;
       setMisses(nextMisses);
-      setFeedback('Try again!');
       setSelectedIds([]);
-      if (isBoss && nextMisses >= ADVENTURE_BOSS_MAX_MISSES) {
+      if (isBoss) {
+        setFeedback('Try again!');
+        if (nextMisses >= ADVENTURE_BOSS_MAX_MISSES) setTimeout(() => finishLevel(false), 600);
+      } else if (nextMisses > ADVENTURE_MAX_MISSES) {
+        setFeedback('Try again!');
         setTimeout(() => finishLevel(false), 600);
+      } else {
+        setFeedback(nextMisses === ADVENTURE_MAX_MISSES ? 'Careful, no more mistakes!' : 'Try again!');
       }
     }
     setTimeout(() => setEntering(false), 280);
@@ -248,7 +287,7 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
               : `Great spelling on ${level.title}.`
             : isBoss
               ? `Three misses — replay the Boss when you are ready.`
-              : `Spark levels need a perfect round (no wrong answers). You had ${misses} miss${misses === 1 ? '' : 'es'}.`}
+              : `Spark levels allow ${ADVENTURE_MAX_MISSES} mistake${ADVENTURE_MAX_MISSES === 1 ? '' : 's'}. You had ${misses}.`}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
           <button
@@ -281,7 +320,14 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
           </div>
           <div className="text-[11px] font-semibold text-slate-400">
             Round {roundIndex + 1}/{ADVENTURE_ROUNDS_PER_LEVEL}
-            {isBoss ? ` · Misses ${misses}/${ADVENTURE_BOSS_MAX_MISSES}` : misses > 0 ? ` · Misses ${misses}` : ''}
+            {isBoss ? ` · Misses ${misses}/${ADVENTURE_BOSS_MAX_MISSES}` : ' · '}
+            {!isBoss && (
+              <span data-testid="adventure-misses-left" className={misses < ADVENTURE_MAX_MISSES ? 'font-bold text-rose-300' : 'font-bold text-amber-300'}>
+                {misses < ADVENTURE_MAX_MISSES
+                  ? `${'❤️'.repeat(ADVENTURE_MAX_MISSES - misses)} ${ADVENTURE_MAX_MISSES - misses} mistake${ADVENTURE_MAX_MISSES - misses === 1 ? '' : 's'} allowed`
+                  : '🤍 No mistakes left'}
+              </span>
+            )}
           </div>
         </div>
         <div className="text-sm font-bold flex items-center gap-1">
@@ -336,7 +382,7 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
         <div
           aria-live="polite"
           className={`h-5 leading-5 text-sm font-bold ${
-            feedback?.startsWith('Nice') ? 'text-emerald-400' : 'text-rose-300'
+            feedback?.startsWith('Nice') ? 'text-emerald-400' : feedback?.startsWith('Careful') ? 'text-amber-300' : 'text-rose-300'
           }`}
         >
           {feedback ?? ''}

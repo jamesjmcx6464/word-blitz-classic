@@ -684,7 +684,7 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Short I",
     "pattern": "-ig",
     "word": "dig",
-    "emoji": "🪏",
+    "emoji": "⛏️",
     "swappableType": "CVC",
     "weakEmoji": false
   },
