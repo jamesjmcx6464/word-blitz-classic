@@ -122,12 +122,41 @@ export default defineConfig(() => {
           cleanupOutdatedCaches: true,
           // Dictionary (words.json) is bundled into the JS build and precached with it.
           // version.json must stay uncached so the app can see a new build over the network.
-          globIgnores: ['**/version.json'],
+          // index.html is omitted: Cloudflare Pages 308s /index.html to /, which makes
+          // precache install fail and silently drops the update.
+          // Word mp3s are runtime-cached (CacheFirst, 'word-audio') so a new SW stays
+          // small and can install quickly; first offline play of an unheard word needs a network fetch.
+          globIgnores: ['**/version.json', '**/index.html', '**/*.mp3'],
           globPatterns: [
-            '**/*.{js,css,html,ico,png,svg,webmanifest,json,woff,woff2,ttf,webp,mp3}',
+            '**/*.{js,css,ico,png,svg,webmanifest,json,woff,woff2,ttf,webp}',
           ],
           maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
           runtimeCaching: [
+            {
+              urlPattern: /\/version\.json(\?.*)?$/i,
+              handler: 'NetworkOnly',
+            },
+            {
+              urlPattern: /\/audio\/.*\.mp3$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'word-audio',
+                expiration: {
+                  maxEntries: 400,
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
+                },
+                cacheableResponse: {statuses: [0, 200]},
+              },
+            },
+            {
+              urlPattern: ({request}) => request.mode === 'navigate',
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'pages',
+                networkTimeoutSeconds: 3,
+                cacheableResponse: {statuses: [0, 200]},
+              },
+            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',

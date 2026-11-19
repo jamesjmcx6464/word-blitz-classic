@@ -33,6 +33,7 @@ interface AdventurePlayProps {
   playerLogo: string;
   onExitToMap: () => void;
   onLevelFinished: (passed: boolean) => void;
+  onRoundActiveChange?: (active: boolean) => void;
 }
 
 type Phase = 'playing' | 'result';
@@ -43,6 +44,7 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
   playerLogo,
   onExitToMap,
   onLevelFinished,
+  onRoundActiveChange,
 }) => {
   const seed = useMemo(
     () => Date.now() ^ (level.id.charCodeAt(0) * 997),
@@ -91,6 +93,11 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
     setupRound(0, seed);
     return () => stopWordAudio();
   }, [setupRound, seed]);
+
+  useEffect(() => {
+    onRoundActiveChange?.(phase === 'playing');
+    return () => onRoundActiveChange?.(false);
+  }, [phase, onRoundActiveChange]);
 
   const remainingCards = cards.filter((c) => !doneIds.has(c.id));
 

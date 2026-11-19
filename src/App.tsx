@@ -105,6 +105,7 @@ export default function App() {
   const [isSoloSetupOpen, setIsSoloSetupOpen] = useState<boolean>(false);
   const [isAdventureSetupOpen, setIsAdventureSetupOpen] = useState<boolean>(false);
   const [adventurePlayer, setAdventurePlayer] = useState<{ name: string; logo: string } | null>(null);
+  const [adventureRoundActive, setAdventureRoundActive] = useState(false);
   const [isTeamSetupOpen, setIsTeamSetupOpen] = useState<boolean>(false);
 
   // Selected Difficulty (Easy, Normal, Hard, Nightmare) persisted across sessions
@@ -1627,8 +1628,10 @@ export default function App() {
           <AdventureMode
             playerName={adventurePlayer.name}
             playerLogo={adventurePlayer.logo}
+            onRoundActiveChange={setAdventureRoundActive}
             onExit={() => {
               setAdventurePlayer(null);
+              setAdventureRoundActive(false);
               setScreen('MENU');
             }}
           />
@@ -1847,7 +1850,7 @@ export default function App() {
         />
       )}
 
-      <UpdateBanner allowed={screen !== 'PLAYING'} />
+      <UpdateBanner allowed={screen !== 'PLAYING' && !adventureRoundActive} />
 
       {/* Game Over Modal (Quick Play) */}
       {screen === 'GAMEOVER' && (

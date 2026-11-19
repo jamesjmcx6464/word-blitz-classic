@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdventureLevelDef } from '../../utils/adventureConfig';
 import {
   AdventureCharacterProgress,
@@ -12,6 +12,8 @@ interface AdventureModeProps {
   playerName: string;
   playerLogo: string;
   onExit: () => void;
+  /** True while a Spark level round is in progress (not the map or result screen). */
+  onRoundActiveChange?: (active: boolean) => void;
 }
 
 type View = 'map' | 'play';
@@ -20,6 +22,7 @@ export const AdventureMode: React.FC<AdventureModeProps> = ({
   playerName,
   playerLogo,
   onExit,
+  onRoundActiveChange,
 }) => {
   const [view, setView] = useState<View>('map');
   const [level, setLevel] = useState<AdventureLevelDef | null>(null);
@@ -44,10 +47,17 @@ export const AdventureMode: React.FC<AdventureModeProps> = ({
   };
 
   const handleExitToMap = () => {
+    onRoundActiveChange?.(false);
     setView('map');
     setLevel(null);
     setProgress(getAdventureProgress(playerName, playerLogo));
   };
+
+  useEffect(() => {
+    if (view !== 'play') onRoundActiveChange?.(false);
+  }, [view, onRoundActiveChange]);
+
+  useEffect(() => () => onRoundActiveChange?.(false), [onRoundActiveChange]);
 
   if (view === 'play' && level) {
     return (
@@ -58,6 +68,7 @@ export const AdventureMode: React.FC<AdventureModeProps> = ({
         playerLogo={playerLogo}
         onExitToMap={handleExitToMap}
         onLevelFinished={handleLevelFinished}
+        onRoundActiveChange={onRoundActiveChange}
       />
     );
   }
