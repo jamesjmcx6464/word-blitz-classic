@@ -31,7 +31,8 @@ export type GameScreen =
   | 'HIGHSCORES'
   | 'CLASSROOM_SETUP'
   | 'CLASSROOM_TURN_TRANSITION'
-  | 'CLASSROOM_VICTORY';
+  | 'CLASSROOM_VICTORY'
+  | 'ADVENTURE';
 
 export type ScreenModeType = 'pc' | 'phone';
 

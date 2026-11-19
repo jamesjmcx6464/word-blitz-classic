@@ -32,6 +32,10 @@ interface SoloPlayerSetupModalProps {
     playerLogo: string,
     roundSeconds: number
   ) => void;
+  /** When set, launching goes to Adventure instead of Solo arcade. */
+  onStartAdventure?: (playerName: string, playerLogo: string) => void;
+  /** 'adventure' hides timer/difficulty and uses the adventure launch handler. */
+  setupVariant?: 'solo' | 'adventure';
   /** Difficulty shared with Home (presets + Custom when Settings are saved) */
   difficulty: DifficultyChoice;
   onChangeDifficulty: (level: DifficultyChoice) => void;
@@ -43,11 +47,14 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
   isOpen,
   onClose,
   onStartSolo,
+  onStartAdventure,
+  setupVariant = 'solo',
   difficulty,
   onChangeDifficulty,
   hasCustomSettings,
   isWide,
 }) => {
+  const isAdventure = setupVariant === 'adventure';
   const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>(() => getRegisteredPlayers());
   const [selectedExistingPlayer, setSelectedExistingPlayer] = useState<RegisteredPlayer | null>(null);
   const [isAddingNew, setIsAddingNew] = useState<boolean>(true);
@@ -185,6 +192,10 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
   const handleLaunch = () => {
     if (!isFormValid) return;
     const registered = registerOrSelectPlayer(activeName, activeLogo);
+    if (isAdventure && onStartAdventure) {
+      onStartAdventure(registered.name, registered.logo);
+      return;
+    }
     onStartSolo(
       registered.name,
       registered.logo,
@@ -212,10 +223,12 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
             </button>
             <div>
               <h2 className="font-display font-black text-xl sm:text-2xl text-white">
-                Player Sign-In
+                {isAdventure ? 'Adventure Sign-In' : 'Player Sign-In'}
               </h2>
               <span className="text-xs font-semibold text-amber-400 block">
-                Pick a registered player or add a new student
+                {isAdventure
+                  ? 'Pick a character for Spark Adventure'
+                  : 'Pick a registered player or add a new student'}
               </span>
             </div>
           </div>
@@ -486,7 +499,8 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
             </>
           )}
 
-          {/* 3. Difficulty */}
+          {/* 3. Difficulty (Solo only) */}
+          {!isAdventure && (
           <div className="pt-2 border-t border-slate-800">
             <DifficultyPicker
               difficulty={difficulty}
@@ -494,8 +508,10 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
               hasCustom={hasCustomSettings}
             />
           </div>
+          )}
 
-          {/* 4. Round Timer */}
+          {/* 4. Round Timer (Solo only) */}
+          {!isAdventure && (
           <div className="pt-2 border-t border-slate-800">
             {/* Timer */}
             <div className="space-y-1.5">
@@ -533,6 +549,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
               )}
             </div>
           </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -560,7 +577,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
             }`}
           >
             <Play className="w-5 h-5 fill-current" />
-            <span>Start Game</span>
+            <span>{isAdventure ? 'Start Adventure' : 'Start Game'}</span>
           </button>
         </div>
       </div>

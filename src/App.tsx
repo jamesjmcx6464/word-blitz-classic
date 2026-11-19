@@ -83,6 +83,7 @@ import { ClassroomScoreboardModal } from './components/ClassroomScoreboardModal'
 import { UpdateBanner } from './components/UpdateBanner';
 import { PlayNowModal } from './components/PlayNowModal';
 import { SoloPlayerSetupModal } from './components/SoloPlayerSetupModal';
+import { AdventureMode } from './components/adventure/AdventureMode';
 import confetti from 'canvas-confetti';
 
 export default function App() {
@@ -102,6 +103,8 @@ export default function App() {
 
   // Modals for Solo Player Setup and Team Play Setup
   const [isSoloSetupOpen, setIsSoloSetupOpen] = useState<boolean>(false);
+  const [isAdventureSetupOpen, setIsAdventureSetupOpen] = useState<boolean>(false);
+  const [adventurePlayer, setAdventurePlayer] = useState<{ name: string; logo: string } | null>(null);
   const [isTeamSetupOpen, setIsTeamSetupOpen] = useState<boolean>(false);
 
   // Selected Difficulty (Easy, Normal, Hard, Nightmare) persisted across sessions
@@ -1573,6 +1576,7 @@ export default function App() {
           onQuickPlay={handleQuickPlay}
           onOpenSoloSetup={() => setIsSoloSetupOpen(true)}
           onOpenTeamSetup={() => setIsTeamSetupOpen(true)}
+          onOpenAdventureSetup={() => setIsAdventureSetupOpen(true)}
           onOpenHighScores={() => {
             setLastSoloResult(null);
             setHighScoresReturn('MENU');
@@ -1601,6 +1605,35 @@ export default function App() {
         hasCustomSettings={customSettings !== null}
         isWide={viewMode === 'wide'}
       />
+
+      <SoloPlayerSetupModal
+        isOpen={isAdventureSetupOpen}
+        onClose={() => setIsAdventureSetupOpen(false)}
+        onStartSolo={() => {}}
+        onStartAdventure={(name, logo) => {
+          setIsAdventureSetupOpen(false);
+          setAdventurePlayer({ name, logo });
+          setScreen('ADVENTURE');
+        }}
+        setupVariant="adventure"
+        difficulty={difficulty}
+        onChangeDifficulty={handleChangeDifficulty}
+        hasCustomSettings={customSettings !== null}
+        isWide={viewMode === 'wide'}
+      />
+
+      {screen === 'ADVENTURE' && adventurePlayer && (
+        <div className="w-full h-full min-h-0 flex-1">
+          <AdventureMode
+            playerName={adventurePlayer.name}
+            playerLogo={adventurePlayer.logo}
+            onExit={() => {
+              setAdventurePlayer(null);
+              setScreen('MENU');
+            }}
+          />
+        </div>
+      )}
 
       {/* Settings (custom gameplay settings -> Custom difficulty) */}
       {isSettingsOpen && (

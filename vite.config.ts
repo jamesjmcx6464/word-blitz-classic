@@ -124,9 +124,9 @@ export default defineConfig(() => {
           // version.json must stay uncached so the app can see a new build over the network.
           globIgnores: ['**/version.json'],
           globPatterns: [
-            '**/*.{js,css,html,ico,png,svg,webmanifest,json,woff,woff2,ttf,webp}',
+            '**/*.{js,css,html,ico,png,svg,webmanifest,json,woff,woff2,ttf,webp,mp3}',
           ],
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

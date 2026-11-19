@@ -9,6 +9,7 @@ import {
   Zap,
   ArrowRight,
   Settings,
+  Map,
 } from 'lucide-react';
 import { ScreenModeType, DifficultyChoice, DIFFICULTY_PRESETS } from '../types/game';
 import { DifficultyPicker } from './DifficultyPicker';
@@ -18,6 +19,7 @@ interface StartMenuProps {
   onQuickPlay: () => void;
   onOpenSoloSetup: () => void;
   onOpenTeamSetup: () => void;
+  onOpenAdventureSetup: () => void;
   onOpenHighScores: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
@@ -38,6 +40,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
   onQuickPlay,
   onOpenSoloSetup,
   onOpenTeamSetup,
+  onOpenAdventureSetup,
   onOpenHighScores,
   soundEnabled,
   onToggleSound,
@@ -223,6 +226,28 @@ export const StartMenu: React.FC<StartMenuProps> = ({
             </div>
           </button>
         </div>
+
+        {/* Adventure Mode */}
+        <button
+          type="button"
+          onClick={onOpenAdventureSetup}
+          className="w-full min-h-[64px] p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-fuchsia-600/90 via-violet-600/90 to-indigo-600/90 hover:from-fuchsia-500 hover:to-indigo-500 border-2 border-fuchsia-300/40 text-white flex items-center gap-3 shadow-md shadow-fuchsia-500/20 transition-all cursor-pointer active:scale-[0.98] text-left group shrink-0"
+        >
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/15 border border-white/30 flex items-center justify-center text-amber-300 shrink-0 group-hover:scale-105 transition-transform">
+            <Map className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="font-display font-black text-base sm:text-lg text-white block leading-tight">
+                Adventure Mode
+              </span>
+              <ArrowRight className="mode-arrow w-4 h-4 text-amber-200 group-hover:translate-x-1 transition-transform shrink-0" />
+            </div>
+            <span className="mode-sub text-xs text-fuchsia-100/90 font-semibold block mt-0.5 leading-snug">
+              Spark · Phonics map &amp; emoji spelling
+            </span>
+          </div>
+        </button>
 
         {/* 4. Difficulty (presets + Custom once Settings are saved) */}
         <DifficultyPicker
