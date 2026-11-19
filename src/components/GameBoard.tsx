@@ -46,6 +46,10 @@ interface GameBoardProps {
   streakFlash?: 'up' | 'down' | null;
   groundBadge?: GroundPlayerBadge | null;
   letterHint?: GroundLetterHint | null;
+  /** Draw the ceiling line (arcade). Adventure Mode has no ceiling. */
+  showCeiling?: boolean;
+  /** Draw the charge-bar floor and multiplier (arcade). */
+  showChargeFloor?: boolean;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -69,6 +73,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   streakFlash = null,
   groundBadge = null,
   letterHint = null,
+  showCeiling = true,
+  showChargeFloor = true,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -432,6 +438,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         )}
 
         {/* Ceiling Danger Line (placed at ceilingY) */}
+        {showCeiling && (
         <g className={nearCeiling ? 'animate-pulse' : ''} pointerEvents="none">
           <line
             x1={hasSideWalls ? wallLeft : 12}
@@ -456,6 +463,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             {nearCeiling ? 'Danger · Ceiling' : 'Ceiling'}
           </text>
         </g>
+        )}
 
         {/* One Continuous Flat Ground Line across the whole width */}
         <g pointerEvents="none">
@@ -478,6 +486,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </g>
 
         {/* Charge-bar floor (drawn before tiles so tiles and flames never cover letters) */}
+        {showChargeFloor && (
         <g pointerEvents="none" className="charge-floor">
           <defs>
             <linearGradient
@@ -550,6 +559,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             strokeWidth="3.5"
           />
         </g>
+        )}
 
         {/* Frozen Hexagons */}
         <g pointerEvents="none">
@@ -812,6 +822,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           <div className="arena-streak-flash" aria-hidden="true" />
         )}
         {/* Multiplier, big in the centre of the floor */}
+        {showChargeFloor && (
         <div
           className="absolute left-0 right-0 pointer-events-none z-[2] flex items-center justify-center [container-type:size]"
           style={{ top: `${(groundY / boardHeight) * 100}%`, bottom: 0 }}
@@ -833,6 +844,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             {formatStreakMult(mult)}×
           </span>
         </div>
+        )}
         {(groundBadge || letterHint) && (
           <div
             className="@container/ground absolute left-0 right-0 pointer-events-none z-[3] flex items-center justify-between gap-1.5 px-2 sm:px-3"

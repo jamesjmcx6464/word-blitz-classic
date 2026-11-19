@@ -219,3 +219,57 @@ export function isPointInHex(
   // 2. Exact 6-sided polygon boundary test
   return Math.sqrt(3) * dx + dy <= 2 * h + 0.5;
 }
+
+/**
+ * After tiles are cleared, re-evaluates which remaining tiles still touch the
+ * ground (directly or through neighbours). Grounded tiles stay frozen, the rest
+ * are flagged as falling so the physics loop drops them to their new rest spot.
+ * Shared by the arcade loop and Adventure Mode.
+ */
+export function regroundHexes<T extends { id: string; x: number; y: number; isFrozen: boolean; isFalling: boolean }>(
+  tiles: T[],
+  groundY: number = GROUND_Y,
+  radius: number = HEX_RADIUS
+): T[] {
+  const groundedIds = findGroundedHexIds(tiles, groundY, radius);
+  return tiles.map((t) => {
+    const isGrounded = groundedIds.has(t.id);
+    return { ...t, isFrozen: isGrounded, isFalling: !isGrounded };
+  });
+}
+
+/**
+ * Evenly spaced column centres (no overlap between neighbours, so tiles in
+ * adjacent columns never rest on each other's shoulders). Used to lay tiles
+ * out in a low, even layer instead of a spire.
+ */
+export function evenColumnCenters(
+  boardWidth: number,
+  maxColumns: number,
+  radius: number = HEX_RADIUS,
+  gap = 4
+): number[] {
+  const pitch = 2 * radius + gap;
+  const fit = Math.max(1, Math.floor((boardWidth - gap) / pitch));
+  const count = Math.max(1, Math.min(fit, maxColumns));
+  const span = (count - 1) * pitch;
+  const start = boardWidth / 2 - span / 2;
+  return Array.from({ length: count }, (_, i) => start + i * pitch);
+}
+
+/**
+ * Assigns each of `count` tiles to a column, always choosing a least-filled
+ * column (ties broken by `rand`), so stacks stay level across the width.
+ */
+export function assignLeastFilledColumns(count: number, columns: number, rand: () => number = Math.random): number[] {
+  const fill = new Array(Math.max(1, columns)).fill(0);
+  const out: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const min = Math.min(...fill);
+    const options = fill.map((f, idx) => (f === min ? idx : -1)).filter((idx) => idx >= 0);
+    const pick = options[Math.floor(rand() * options.length) % options.length];
+    fill[pick]++;
+    out.push(pick);
+  }
+  return out;
+}

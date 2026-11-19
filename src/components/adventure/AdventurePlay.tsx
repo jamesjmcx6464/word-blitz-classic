@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -20,11 +20,21 @@ import {
   buildLetterTray,
   buildLevelRounds,
 } from '../../utils/adventureWordSelect';
+import { GameBoard } from '../GameBoard';
+import { HexTile } from '../../types/game';
+import { HexDropGeometry, useHexDropBoard } from '../../hooks/useHexDropBoard';
+import { HEX_RADIUS } from '../../utils/hexPhysics';
 
-interface Tile {
-  id: string;
-  letter: string;
-  used: boolean;
+/** Height (board units) of the ground strip under the tiles. */
+const ADVENTURE_GROUND_H = 44;
+const NO_PULSE = new Set<string>();
+
+/** Fit an SVG board to the measured play area, keeping hexes close to arcade size. */
+function computeGeometry(cw: number, ch: number): HexDropGeometry & { boardHeight: number } {
+  const boardWidth = Math.round(Math.max(340, Math.min(720, cw)));
+  const tileRadius = boardWidth < 400 ? 26 : HEX_RADIUS;
+  const boardHeight = Math.round(Math.max(200, (ch * boardWidth) / Math.max(1, cw)));
+  return { boardWidth, boardHeight, groundY: boardHeight - ADVENTURE_GROUND_H, tileRadius };
 }
 
 interface AdventurePlayProps {
@@ -54,39 +64,65 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
   const [rounds] = useState(() => buildLevelRounds(level.soundGroup, seed));
   const [roundIndex, setRoundIndex] = useState(0);
   const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
-  const [tiles, setTiles] = useState<Tile[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [misses, setMisses] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('playing');
   const [passed, setPassed] = useState(false);
   const [entering, setEntering] = useState(false);
-  const [dropIn, setDropIn] = useState(false);
+
+  // Measure the play area so the hex board always fits inside the screen.
+  const boardWrapRef = useRef<HTMLDivElement | null>(null);
+  const [geometry, setGeometry] = useState<(HexDropGeometry & { boardHeight: number }) | null>(null);
+  useLayoutEffect(() => {
+    const el = boardWrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 40 || r.height < 40) return;
+      setGeometry((prev) => {
+        const next = computeGeometry(r.width, r.height);
+        if (
+          prev &&
+          prev.boardWidth === next.boardWidth &&
+          prev.boardHeight === next.boardHeight &&
+          prev.tileRadius === next.tileRadius
+        ) {
+          return prev;
+        }
+        return next;
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [phase]);
+
+  const { frozenTiles, fallingTiles, dropLetters, clearTiles } = useHexDropBoard(geometry);
+  const allTiles = useMemo(() => [...frozenTiles, ...fallingTiles], [frozenTiles, fallingTiles]);
+  const selectedTiles = useMemo(
+    () =>
+      selectedIds
+        .map((id) => allTiles.find((t) => t.id === id))
+        .filter((t): t is HexTile => !!t),
+    [selectedIds, allTiles]
+  );
 
   const cards = rounds[roundIndex] ?? [];
   const isBoss = level.kind === 'boss';
-  const spelled = selectedIds
-    .map((id) => tiles.find((t) => t.id === id)?.letter ?? '')
-    .join('');
+  const spelled = selectedTiles.map((t) => t.letter.display).join('');
 
   const setupRound = useCallback(
     (idx: number, roundSeed: number) => {
       const round = rounds[idx] ?? [];
       const letters = buildLetterTray(round, roundSeed);
-      setTiles(
-        letters.map((letter, i) => ({
-          id: `t${idx}-${i}-${letter}`,
-          letter,
-          used: false,
-        }))
-      );
+      dropLetters(letters, roundSeed, `t${idx}`);
       setSelectedIds([]);
       setDoneIds(new Set());
       setFeedback(null);
-      setDropIn(false);
-      requestAnimationFrame(() => setDropIn(true));
     },
-    [rounds]
+    [rounds, dropLetters]
   );
 
   useEffect(() => {
@@ -106,28 +142,22 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
     playWordAudio(entry.word);
   };
 
-  const handleTileTap = (tile: Tile) => {
-    if (phase !== 'playing' || tile.used || entering) return;
-    setTiles((prev) =>
-      prev.map((t) => (t.id === tile.id ? { ...t, used: true } : t))
-    );
-    setSelectedIds((prev) => [...prev, tile.id]);
+  const handleTileTap = (tile: HexTile) => {
+    if (phase !== 'playing' || entering || tile.isClearing) return;
     setFeedback(null);
+    setSelectedIds((prev) =>
+      prev.includes(tile.id) ? prev.filter((id) => id !== tile.id) : [...prev, tile.id]
+    );
   };
 
   const handleBackspace = () => {
     if (phase !== 'playing' || selectedIds.length === 0) return;
-    const last = selectedIds[selectedIds.length - 1];
     setSelectedIds((prev) => prev.slice(0, -1));
-    setTiles((prev) =>
-      prev.map((t) => (t.id === last ? { ...t, used: false } : t))
-    );
   };
 
   const handleClear = () => {
     if (phase !== 'playing') return;
     setSelectedIds([]);
-    setTiles((prev) => prev.map((t) => ({ ...t, used: false })));
     setFeedback(null);
   };
 
@@ -144,9 +174,8 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
       (c) => c.word.toUpperCase() === spelled.toUpperCase()
     );
     if (match) {
-      // Clear used tiles for this word; leave unused tiles for others
-      const usedSet = new Set(selectedIds);
-      setTiles((prev) => prev.filter((t) => !usedSet.has(t.id)));
+      // Clear this word's tiles (arcade clear animation); the rest re-settle
+      clearTiles(selectedIds);
       setSelectedIds([]);
       const nextDone = new Set(doneIds);
       nextDone.add(match.id);
@@ -183,7 +212,6 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
       setMisses(nextMisses);
       setFeedback('Try again!');
       setSelectedIds([]);
-      setTiles((prev) => prev.map((t) => ({ ...t, used: false })));
       if (isBoss && nextMisses >= ADVENTURE_BOSS_MAX_MISSES) {
         setTimeout(() => finishLevel(false), 600);
       }
@@ -336,29 +364,27 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
         </div>
       </div>
 
-      {/* Even-layer letter tray */}
-      <div className="flex-1 min-h-0 flex items-end justify-center pb-3 pt-1">
-        <div
-          className={`w-full max-w-lg flex flex-wrap justify-center content-end gap-2 transition-transform duration-700 ease-out ${
-            dropIn ? 'translate-y-0 opacity-100' : '-translate-y-24 opacity-0'
-          }`}
-        >
-          {tiles.map((tile) => (
-            <button
-              key={tile.id}
-              type="button"
-              disabled={tile.used}
-              onClick={() => handleTileTap(tile)}
-              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl font-display font-black text-xl sm:text-2xl border-2 flex items-center justify-center transition-all ${
-                tile.used
-                  ? 'opacity-0 scale-75 pointer-events-none border-transparent'
-                  : 'bg-indigo-500/20 border-indigo-300/60 text-white shadow-md shadow-indigo-500/20 cursor-pointer active:scale-90 hover:bg-indigo-500/30'
-              }`}
-            >
-              {tile.letter}
-            </button>
-          ))}
-        </div>
+      {/* Hex letter board: same tiles, ground and fall/settle physics as the arcade */}
+      <div ref={boardWrapRef} className="flex-1 min-h-0 min-w-0 w-full flex pb-1" data-testid="adventure-board">
+        {geometry && (
+          <GameBoard
+            boardWidth={geometry.boardWidth}
+            boardHeight={geometry.boardHeight}
+            groundY={geometry.groundY}
+            tileRadius={geometry.tileRadius}
+            frozenTiles={frozenTiles}
+            fallingTiles={fallingTiles}
+            selectedTiles={selectedTiles}
+            floatingScores={[]}
+            pulsingTileIds={NO_PULSE}
+            onTileClick={handleTileTap}
+            isPaused={false}
+            nearCeiling={false}
+            showCeiling={false}
+            showChargeFloor={false}
+            groundBadge={{ name: playerName, emoji: playerLogo, caption: `Round ${roundIndex + 1}/${ADVENTURE_ROUNDS_PER_LEVEL}` }}
+          />
+        )}
       </div>
     </div>
   );

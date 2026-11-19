@@ -25,7 +25,7 @@ import {
   BOARD_HEIGHT,
   BOARD_WIDTH_WIDE,
   findLandingY,
-  findGroundedHexIds,
+  regroundHexes,
   computeScreenSpeedMultiplier,
 } from './utils/hexPhysics';
 import { drawLetter, resetLetterStreak, LetterTileInfo } from './utils/letterBag';
@@ -1348,16 +1348,7 @@ export default function App() {
 
       // Identify which tiles remain connected to ground
       const curTileRadius = freePlaySettingsRef.current.tileRadius;
-      const groundedIds = findGroundedHexIds(remainingTiles, GROUND_Y, curTileRadius);
-
-      const updated = remainingTiles.map((t) => {
-        const isGrounded = groundedIds.has(t.id);
-        return {
-          ...t,
-          isFrozen: isGrounded,
-          isFalling: !isGrounded,
-        };
-      });
+      const updated = regroundHexes(remainingTiles, GROUND_Y, curTileRadius);
 
       frozenTilesRef.current = updated;
       setFrozenTiles(updated);
