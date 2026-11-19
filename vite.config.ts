@@ -15,6 +15,86 @@ function buildVersion(): string {
   }
 }
 
+/** Dev/preview builds get a distinct grey/red/white icon and app name. */
+function isDevIconBuild(): boolean {
+  if (process.env.WB_DEV_ICON === '1') return true;
+  const branch = process.env.CF_PAGES_BRANCH;
+  return Boolean(branch && branch !== 'main');
+}
+
+const DEV_THEME = '#4b5563';
+
+function devIconHtml(): Plugin {
+  return {
+    name: 'dev-icon-html',
+    transformIndexHtml(html) {
+      if (!isDevIconBuild()) return html;
+      return html
+        .replaceAll('apple-touch-icon.png', 'apple-touch-icon-dev.png')
+        .replace(
+          'name="apple-mobile-web-app-title" content="Word Blitz"',
+          'name="apple-mobile-web-app-title" content="Word Blitz DEV"',
+        )
+        .replace(
+          'name="theme-color" content="#020617"',
+          `name="theme-color" content="${DEV_THEME}"`,
+        );
+    },
+  };
+}
+
+function pwaOptions() {
+  const dev = isDevIconBuild();
+  const iconDir = dev ? 'icons-dev' : 'icons';
+  return {
+    registerType: 'prompt' as const,
+    includeAssets: [
+      'favicon.ico',
+      'favicon-32.png',
+      dev ? 'apple-touch-icon-dev.png' : 'apple-touch-icon.png',
+      `${iconDir}/icon-192.png`,
+      `${iconDir}/icon-512.png`,
+      `${iconDir}/icon-512-maskable.png`,
+    ],
+    manifest: {
+      ...(dev ? {id: './?dev'} : {}),
+      name: dev ? 'Word Blitz DEV' : 'Word Blitz Classic',
+      short_name: dev ? 'Word Blitz DEV' : 'Word Blitz',
+      description:
+        'Fast-paced hexagonal falling-letter word puzzle game. Spell words to clear hexagonal tiles before the stack reaches the top.',
+      start_url: './',
+      scope: './',
+      display: 'fullscreen' as const,
+      display_override: ['fullscreen' as const, 'standalone' as const],
+      orientation: 'portrait' as const,
+      background_color: '#020617',
+      theme_color: dev ? DEV_THEME : '#020617',
+      lang: 'en',
+      categories: ['games', 'education'],
+      icons: [
+        {
+          src: `${iconDir}/icon-192.png`,
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'any' as const,
+        },
+        {
+          src: `${iconDir}/icon-512.png`,
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any' as const,
+        },
+        {
+          src: `${iconDir}/icon-512-maskable.png`,
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable' as const,
+        },
+      ],
+    },
+  };
+}
+
 /** Write version.json at build time so the installed app can compare versions over the network. */
 function emitVersionJson(version: string): Plugin {
   return {
@@ -35,51 +115,9 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       emitVersionJson(buildVersion()),
+      devIconHtml(),
       VitePWA({
-        registerType: 'prompt',
-        includeAssets: [
-          'favicon.ico',
-          'favicon-32.png',
-          'apple-touch-icon.png',
-          'icons/icon-192.png',
-          'icons/icon-512.png',
-          'icons/icon-512-maskable.png',
-        ],
-        manifest: {
-          name: 'Word Blitz Classic',
-          short_name: 'Word Blitz',
-          description:
-            'Fast-paced hexagonal falling-letter word puzzle game. Spell words to clear hexagonal tiles before the stack reaches the top.',
-          start_url: './',
-          scope: './',
-          display: 'fullscreen',
-          display_override: ['fullscreen', 'standalone'],
-          orientation: 'portrait',
-          background_color: '#020617',
-          theme_color: '#020617',
-          lang: 'en',
-          categories: ['games', 'education'],
-          icons: [
-            {
-              src: 'icons/icon-192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: 'icons/icon-512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: 'icons/icon-512-maskable.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable',
-            },
-          ],
-        },
+        ...pwaOptions(),
         workbox: {
           cleanupOutdatedCaches: true,
           // Dictionary (words.json) is bundled into the JS build and precached with it.
