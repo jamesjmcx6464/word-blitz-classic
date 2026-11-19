@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTapReady } from '../hooks/useTapReady';
-import { Play, Trophy, Home, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Trophy, Home, Sparkles, ChevronDown, ChevronUp, Map as MapIcon } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { WordEntry } from '../types/game';
 import { WordChips } from './WordChips';
@@ -17,6 +17,8 @@ interface GameOverModalProps {
   onBackToMenu: () => void;
   onOpenLeaderboards: () => void;
   reason?: string;
+  /** Spark Adventure bonus Blitz: show the level's best score and a Back to Map button instead of leaderboards. */
+  bonus?: { title: string; best: number; isNewBest: boolean };
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -30,6 +32,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   onBackToMenu,
   onOpenLeaderboards,
   reason = 'The letters reached the top!',
+  bonus,
 }) => {
   const tapReady = useTapReady(600);
   const isTimeOut = /time/i.test(reason);
@@ -39,14 +42,14 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   const [wordsOpen, setWordsOpen] = useState(true);
 
   useEffect(() => {
-    if (isNewHighScore || (rank > 0 && rank <= 3)) {
+    if (isNewHighScore || (rank > 0 && rank <= 3) || bonus?.isNewBest) {
       confetti({
         particleCount: 80,
         spread: 60,
         origin: { y: 0.6 },
       });
     }
-  }, [isNewHighScore, rank]);
+  }, [isNewHighScore, rank, bonus?.isNewBest]);
 
   return (
     <div
@@ -54,7 +57,21 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
       className="game-over-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md select-none animate-fade-in overflow-hidden"
     >
       <div className="game-over-card w-full max-w-md bg-slate-900 border-2 border-slate-700/80 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col items-center text-center text-slate-100 overflow-hidden min-h-0">
-        {isNewHighScore ? (
+        {bonus ? (
+          <div
+            data-testid="bonus-badge"
+            className={`mb-3 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-black flex items-center gap-2 tracking-wide shrink-0 border ${
+              bonus.isNewBest
+                ? 'bg-amber-400/20 border-amber-400/50 text-amber-300'
+                : 'bg-fuchsia-500/15 border-fuchsia-400/40 text-fuchsia-200'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>
+              {bonus.title} · {bonus.isNewBest ? 'New best!' : `Best ${bonus.best.toLocaleString()}`}
+            </span>
+          </div>
+        ) : isNewHighScore ? (
           <div className="mb-3 px-3.5 py-1.5 rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-300 text-xs sm:text-sm font-black flex items-center gap-2 tracking-wide shrink-0">
             <Sparkles className="w-4 h-4 text-amber-400 fill-amber-400" />
             <span>New high score!</span>
@@ -163,6 +180,17 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             <span>Play Again</span>
           </button>
 
+          {bonus ? (
+            <button
+              type="button"
+              onClick={onBackToMenu}
+              data-testid="bonus-back-to-map"
+              className="w-full min-h-[52px] px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-display font-black text-base flex items-center justify-center gap-2 border border-slate-600/80 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400"
+            >
+              <MapIcon className="w-5 h-5 text-emerald-300 shrink-0" />
+              <span>Back to Map</span>
+            </button>
+          ) : (
           <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
@@ -181,6 +209,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               <span>Main Menu</span>
             </button>
           </div>
+          )}
         </div>
       </div>
     </div>

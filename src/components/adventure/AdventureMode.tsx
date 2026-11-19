@@ -14,6 +14,8 @@ interface AdventureModeProps {
   onExit: () => void;
   /** True while a Spark level round is in progress (not the map or result screen). */
   onRoundActiveChange?: (active: boolean) => void;
+  /** Start the Word Blitz bonus game unlocked by beating this level. */
+  onPlayBonus?: (level: AdventureLevelDef) => void;
 }
 
 type View = 'map' | 'play';
@@ -23,6 +25,7 @@ export const AdventureMode: React.FC<AdventureModeProps> = ({
   playerLogo,
   onExit,
   onRoundActiveChange,
+  onPlayBonus,
 }) => {
   const [view, setView] = useState<View>('map');
   const [level, setLevel] = useState<AdventureLevelDef | null>(null);
@@ -80,6 +83,7 @@ export const AdventureMode: React.FC<AdventureModeProps> = ({
       progress={progress}
       onBack={onExit}
       onSelectLevel={handleSelectLevel}
+      onPlayBonus={onPlayBonus}
     />
   );
 };

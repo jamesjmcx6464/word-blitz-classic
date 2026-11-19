@@ -36,3 +36,19 @@ export const SPARK_LEVELS: AdventureLevelDef[] = [
 ];
 
 export const ADVENTURE_PROGRESS_KEY = 'word_blitz_adventure_progress_v1';
+
+/** Word Blitz bonus games (arcade game tuned to a level's words). */
+export const BONUS_LEVEL_SECONDS = 30;
+export const BONUS_BOSS_SECONDS = 60;
+/** Biggest tile size option in Settings ("Huge"). */
+export const BONUS_TILE_RADIUS = 34;
+/** Chance a new tile starts spelling a lesson word (Sound Focus uses 0.4). */
+export const BONUS_SEED_CHANCE = 0.45;
+
+export function bonusSecondsFor(level: AdventureLevelDef): number {
+  return level.kind === 'boss' ? BONUS_BOSS_SECONDS : BONUS_LEVEL_SECONDS;
+}
+
+export function bonusTitleFor(level: AdventureLevelDef): string {
+  return level.kind === 'boss' ? 'Boss Blitz' : `${level.title} Blitz`;
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Lock, Star, Zap } from 'lucide-react';
+import { ArrowLeft, Lock, Play, Star, Zap } from 'lucide-react';
 import {
   AdventureLevelDef,
   AdventureLevelId,
@@ -7,9 +7,13 @@ import {
 } from '../../utils/adventureConfig';
 import {
   AdventureCharacterProgress,
+  getBonusBest,
+  getSparkScore,
+  isBonusUnlocked,
   isBossUnlocked,
   isLevelPassed,
 } from '../../utils/adventureProgress';
+import { bonusSecondsFor } from '../../utils/adventureConfig';
 
 interface AdventureMapProps {
   playerName: string;
@@ -17,6 +21,7 @@ interface AdventureMapProps {
   progress: AdventureCharacterProgress;
   onBack: () => void;
   onSelectLevel: (level: AdventureLevelDef) => void;
+  onPlayBonus?: (level: AdventureLevelDef) => void;
 }
 
 const VOWELS = SPARK_LEVELS.filter((l) => l.kind === 'vowel');
@@ -28,19 +33,53 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
   progress,
   onBack,
   onSelectLevel,
+  onPlayBonus,
 }) => {
   const bossOpen = isBossUnlocked(progress);
+  const sparkScore = getSparkScore(progress);
+
+  /** Bonus Blitz chip under a level tile: locked until the level is beaten, then shows its best. */
+  const renderBonus = (level: AdventureLevelDef) => {
+    const unlocked = isBonusUnlocked(progress, level.id);
+    const best = getBonusBest(progress, level.id);
+    if (!unlocked) {
+      return (
+        <span
+          data-testid={`bonus-${level.id}`}
+          data-locked="true"
+          aria-label={`${level.title} Blitz locked`}
+          className="absolute left-1/2 -translate-x-1/2 -bottom-5 z-20 h-8 px-2.5 rounded-full bg-slate-900 border border-slate-700 text-slate-500 text-[11px] font-black flex items-center gap-1 whitespace-nowrap pointer-events-none"
+        >
+          <Lock className="w-3 h-3" />
+          Blitz
+        </span>
+      );
+    }
+    return (
+      <button
+        type="button"
+        data-testid={`bonus-${level.id}`}
+        data-locked="false"
+        onClick={() => onPlayBonus?.(level)}
+        aria-label={`Play ${level.title} Blitz (${bonusSecondsFor(level)} seconds)`}
+        className="absolute left-1/2 -translate-x-1/2 -bottom-5 z-20 h-8 px-2.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 text-[11px] font-black flex items-center gap-1 whitespace-nowrap shadow-md shadow-amber-500/30 cursor-pointer active:scale-95"
+      >
+        <Play className="w-3 h-3 fill-current" />
+        {best === null ? 'Play Blitz' : <span className="tabular-nums">Blitz · {best.toLocaleString()}</span>}
+      </button>
+    );
+  };
 
   const renderTile = (level: AdventureLevelDef, className: string) => {
     const passed = isLevelPassed(progress, level.id as AdventureLevelId);
     const locked = level.kind === 'boss' && !bossOpen;
     return (
+      <div key={level.id} className="relative">
       <button
-        key={level.id}
         type="button"
         disabled={locked}
         onClick={() => !locked && onSelectLevel(level)}
-        className={`relative flex flex-col items-center justify-center gap-1 rounded-3xl border-2 p-3 min-h-[96px] min-w-[96px] sm:min-h-[110px] sm:min-w-[110px] transition-all ${className} ${
+        className={`relative flex flex-col items-center justify-center gap-1 rounded-3xl border-2 px-3 pt-3 pb-4 min-h-[96px] min-w-[96px] sm:min-h-[110px] sm:min-w-[110px] transition-all ${className} ${
           locked
             ? 'bg-slate-900/80 border-slate-700 text-slate-500 cursor-not-allowed opacity-70'
             : passed
@@ -66,6 +105,8 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
           </span>
         )}
       </button>
+      {renderBonus(level)}
+      </div>
     );
   };
 
@@ -95,6 +136,18 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
       </header>
 
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4 py-4">
+        <div
+          data-testid="spark-score"
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900 border border-amber-400/40 shrink-0"
+        >
+          <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+          <span className="text-[11px] font-display font-black uppercase tracking-widest text-amber-400">
+            Spark Score
+          </span>
+          <span className="font-display font-black text-xl text-amber-300 tabular-nums">
+            {sparkScore.toLocaleString()}
+          </span>
+        </div>
         {/* Map layout: 5 vowels around boss */}
         <div className="relative w-full max-w-md aspect-square max-h-[min(68vh,420px)]">
           {/* connector lines */}
@@ -123,7 +176,7 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
             ))}
           </svg>
 
-          <div className="absolute left-1/2 top-[6%] -translate-x-1/2">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2">
             {renderTile(VOWELS[0], '')}
           </div>
           <div className="absolute right-[2%] top-[28%]">

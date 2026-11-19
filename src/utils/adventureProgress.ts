@@ -10,6 +10,8 @@ export interface AdventureCharacterProgress {
   logo: string;
   passedLevels: AdventureLevelId[];
   bossPassed: boolean;
+  /** Best Word Blitz bonus score per level (vowel levels + boss). */
+  bonusBest?: Partial<Record<AdventureLevelId, number>>;
   updatedAt: number;
 }
 
@@ -105,4 +107,51 @@ export function isLevelPassed(
 ): boolean {
   if (levelId === 'boss') return progress.bossPassed;
   return progress.passedLevels.includes(levelId);
+}
+
+/** A level's bonus Blitz unlocks once that level (or the Boss) is beaten. */
+export function isBonusUnlocked(
+  progress: AdventureCharacterProgress,
+  levelId: AdventureLevelId
+): boolean {
+  return isLevelPassed(progress, levelId);
+}
+
+export function getBonusBest(
+  progress: AdventureCharacterProgress,
+  levelId: AdventureLevelId
+): number | null {
+  const v = progress.bonusBest?.[levelId];
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
+/** Spark Adventure score = sum of best bonus scores (5 level blitzes + boss blitz). */
+export function getSparkScore(progress: AdventureCharacterProgress): number {
+  return SPARK_LEVELS.reduce((sum, l) => sum + (getBonusBest(progress, l.id) ?? 0), 0);
+}
+
+/** Save a bonus Blitz score; keeps the best per level per character. */
+export function recordBonusScore(
+  name: string,
+  logo: string,
+  levelId: AdventureLevelId,
+  score: number
+): { progress: AdventureCharacterProgress; best: number; isNewBest: boolean; previousBest: number | null } {
+  const key = playerKey(name, logo);
+  const store = readStore();
+  const current = store[key] ?? getAdventureProgress(name, logo);
+  const previousBest = getBonusBest(current, levelId);
+  const isNewBest = previousBest === null || score > previousBest;
+  const best = isNewBest ? score : (previousBest as number);
+  const next: AdventureCharacterProgress = {
+    ...current,
+    playerKey: key,
+    name,
+    logo,
+    bonusBest: { ...(current.bonusBest ?? {}), [levelId]: best },
+    updatedAt: Date.now(),
+  };
+  store[key] = next;
+  writeStore(store);
+  return { progress: next, best, isNewBest, previousBest };
 }

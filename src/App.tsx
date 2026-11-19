@@ -64,6 +64,7 @@ import {
   getGroundLetterHint,
   isStandardLetterMix,
   LetterDistributionSettings,
+  DEFAULT_LETTER_DISTRIBUTION,
 } from './utils/letterDistributions';
 import { SettingsModal } from './components/SettingsModal';
 import { recordSoloPlayerResult } from './utils/registeredPlayers';
@@ -84,6 +85,15 @@ import { UpdateBanner } from './components/UpdateBanner';
 import { PlayNowModal } from './components/PlayNowModal';
 import { SoloPlayerSetupModal } from './components/SoloPlayerSetupModal';
 import { AdventureMode } from './components/adventure/AdventureMode';
+import {
+  AdventureLevelDef,
+  BONUS_TILE_RADIUS,
+  bonusSecondsFor,
+  bonusTitleFor,
+} from './utils/adventureConfig';
+import { recordBonusScore } from './utils/adventureProgress';
+import { bonusLetterDraw } from './utils/adventureBonus';
+import { LetterDrawOptions } from './utils/letterBag';
 import confetti from 'canvas-confetti';
 
 export default function App() {
@@ -106,7 +116,15 @@ export default function App() {
   const [isAdventureSetupOpen, setIsAdventureSetupOpen] = useState<boolean>(false);
   const [adventurePlayer, setAdventurePlayer] = useState<{ name: string; logo: string } | null>(null);
   const [adventureRoundActive, setAdventureRoundActive] = useState(false);
+  const adventurePlayerRef = useRef<{ name: string; logo: string } | null>(null);
+  adventurePlayerRef.current = adventurePlayer;
   const [isTeamSetupOpen, setIsTeamSetupOpen] = useState<boolean>(false);
+
+  // Spark Adventure bonus Blitz (arcade game tuned to a beaten level's words)
+  const [bonusRun, setBonusRun] = useState<{ level: AdventureLevelDef; seconds: number } | null>(null);
+  const bonusRunRef = useRef<{ level: AdventureLevelDef; seconds: number } | null>(null);
+  const bonusDrawRef = useRef<LetterDrawOptions | null>(null);
+  const [bonusResult, setBonusResult] = useState<{ best: number; isNewBest: boolean } | null>(null);
 
   // Selected Difficulty (Easy, Normal, Hard, Nightmare) persisted across sessions
   const [difficulty, setDifficulty] = useState<DifficultyChoice>(() => getSavedDifficulty());
@@ -557,6 +575,22 @@ export default function App() {
     const reasonText = customReason || 'The letters reached the top!';
     setGameOverReason(reasonText);
 
+    // Spark bonus Blitz: save the best score to adventure progress, not the arcade leaderboards.
+    const bonus = bonusRunRef.current;
+    if (bonus) {
+      const player = adventurePlayerRef.current;
+      if (player) {
+        const res = recordBonusScore(player.name, player.logo, bonus.level.id, scoreRef.current);
+        setBonusResult({ best: res.best, isNewBest: res.isNewBest && scoreRef.current > 0 });
+      } else {
+        setBonusResult({ best: scoreRef.current, isNewBest: false });
+      }
+      setGameOverStats({ rank: 0, isNewHighScore: false });
+      setLastSoloResult(null);
+      setScreen('GAMEOVER');
+      return;
+    }
+
     const activePlayer = currentSoloPlayerRef.current;
     const roundSec = activeRoundSecondsRef.current;
     const timeBucket = makeTimeBucketKey('timer', roundSec);
@@ -755,7 +789,9 @@ export default function App() {
     }
 
     const diffNow = difficultyRef.current;
-    const letter: LetterTileInfo = drawLetter(resolveLetterDraw(diffNow, letterDistRef.current));
+    const letter: LetterTileInfo = drawLetter(
+      bonusDrawRef.current ?? resolveLetterDraw(diffNow, letterDistRef.current)
+    );
 
     const newTile: HexTile = {
       id: `tile_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${Math.floor(performance.now() * 100)}`,
@@ -829,9 +865,14 @@ export default function App() {
     dropSpeed?: number;
     spawnIntervalMs?: number;
     dynamicPace?: boolean;
+    bonus?: boolean;
   }) => {
     setClassroomMatch(null);
     classroomMatchRef.current = null;
+    if (!overrides?.bonus && bonusRunRef.current) {
+      restoreAfterBonus();
+    }
+    setBonusResult(null);
 
     const preset = configFor(difficultyRef.current);
 
@@ -879,6 +920,83 @@ export default function App() {
     setScreen('PLAYING');
 
     spawnTimerRef.current = 0; // loop spawns the first tile
+  };
+
+  // Settings in effect before a bonus Blitz, restored (not re-saved) when it ends.
+  const preBonusRef = useRef<{
+    difficulty: DifficultyChoice;
+    letterDist: LetterDistributionSettings;
+    freePlay: FreePlaySettings;
+  } | null>(null);
+
+  function restoreAfterBonus() {
+    const prev = preBonusRef.current;
+    bonusRunRef.current = null;
+    bonusDrawRef.current = null;
+    setBonusRun(null);
+    if (!prev) return;
+    preBonusRef.current = null;
+    setDifficulty(prev.difficulty);
+    difficultyRef.current = prev.difficulty;
+    setLetterDist(prev.letterDist);
+    letterDistRef.current = prev.letterDist;
+    setFreePlaySettings(prev.freePlay);
+    freePlaySettingsRef.current = prev.freePlay;
+  }
+
+  // Spark bonus Blitz: the arcade game on Normal, biggest tiles, lesson-tuned letters, 30 s / 60 s.
+  const handleStartBonus = (level: AdventureLevelDef) => {
+    if (!preBonusRef.current) {
+      preBonusRef.current = {
+        difficulty: difficultyRef.current,
+        letterDist: letterDistRef.current,
+        freePlay: freePlaySettingsRef.current,
+      };
+    }
+    const seconds = bonusSecondsFor(level);
+    const run = { level, seconds };
+    bonusRunRef.current = run;
+    setBonusRun(run);
+    bonusDrawRef.current = bonusLetterDraw(level);
+
+    setCurrentSoloPlayer(null);
+    currentSoloPlayerRef.current = null;
+    setLastSoloResult(null);
+    setAdventureRoundActive(false);
+
+    // Normal preset, applied without saving over the player's own difficulty / letters / settings.
+    setDifficulty('normal');
+    difficultyRef.current = 'normal';
+    setLetterDist({ ...DEFAULT_LETTER_DISTRIBUTION });
+    letterDistRef.current = { ...DEFAULT_LETTER_DISTRIBUTION };
+    const preset = getDifficultyConfig('normal', null);
+    const bonusSettings: FreePlaySettings = {
+      ...freePlaySettingsRef.current,
+      ...settingsFromConfig(preset),
+      tileRadius: BONUS_TILE_RADIUS,
+      timeLimit: seconds,
+      speedIncreaseEnabled: preset.paceEnabled,
+    };
+    setFreePlaySettings(bonusSettings);
+    freePlaySettingsRef.current = bonusSettings;
+    freePlaySpeedRef.current = preset.dropSpeed;
+
+    handleStartGame({
+      timeLimit: seconds,
+      dropSpeed: preset.dropSpeed,
+      spawnIntervalMs: preset.spawnIntervalMs,
+      dynamicPace: preset.paceEnabled,
+      bonus: true,
+    });
+  };
+
+  const handleBonusBackToMap = () => {
+    restoreAfterBonus();
+    setBonusResult(null);
+    fallingTilesRef.current = [];
+    setFallingTiles([]);
+    setSelectedTiles([]);
+    setScreen(adventurePlayerRef.current ? 'ADVENTURE' : 'MENU');
   };
 
   // Start Quick Play using a specific DifficultyLevel & timeLimit
@@ -1620,6 +1738,7 @@ export default function App() {
             playerName={adventurePlayer.name}
             playerLogo={adventurePlayer.logo}
             onRoundActiveChange={setAdventureRoundActive}
+            onPlayBonus={handleStartBonus}
             onExit={() => {
               setAdventurePlayer(null);
               setAdventureRoundActive(false);
@@ -1790,6 +1909,12 @@ export default function App() {
                         onClick: () => setIsClassroomScoreboardOpen(true),
                       };
                     })()
+                  : bonusRun && adventurePlayer
+                    ? {
+                        name: adventurePlayer.name,
+                        emoji: adventurePlayer.logo,
+                        caption: bonusTitleFor(bonusRun.level),
+                      }
                   : currentSoloPlayer
                     ? {
                         name: currentSoloPlayer.name,
@@ -1810,7 +1935,9 @@ export default function App() {
           onRestart={
             classroomMatch
               ? handleStartClassroomTurn
-              : () => {
+              : bonusRun
+                ? () => handleStartBonus(bonusRun.level)
+                : () => {
                   const preset = configFor(difficultyRef.current);
                   if (currentSoloPlayer) {
                     handleStartGame({
@@ -1824,7 +1951,13 @@ export default function App() {
                   }
                 }
           }
-          onQuitToMenu={classroomMatch ? handleExitClassroomToMenu : () => setScreen('MENU')}
+          onQuitToMenu={
+            classroomMatch
+              ? handleExitClassroomToMenu
+              : bonusRun
+                ? handleBonusBackToMap
+                : () => setScreen('MENU')
+          }
           soundEnabled={soundEnabled}
           onToggleSound={handleToggleSound}
           viewMode={viewMode}
@@ -1852,8 +1985,17 @@ export default function App() {
           wordEntries={wordHistory}
           rank={gameOverStats.rank}
           isNewHighScore={gameOverStats.isNewHighScore}
-          onNewGame={handleQuickPlayAgain}
-          onBackToMenu={() => setScreen('MENU')}
+          onNewGame={bonusRun ? () => handleStartBonus(bonusRun.level) : handleQuickPlayAgain}
+          onBackToMenu={bonusRun ? handleBonusBackToMap : () => setScreen('MENU')}
+          bonus={
+            bonusRun
+              ? {
+                  title: bonusTitleFor(bonusRun.level),
+                  best: bonusResult?.best ?? score,
+                  isNewBest: bonusResult?.isNewBest ?? false,
+                }
+              : undefined
+          }
           onOpenLeaderboards={() => {
             setHighScoresReturn('GAMEOVER');
             setScreen('HIGHSCORES');
