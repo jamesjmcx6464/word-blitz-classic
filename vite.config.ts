@@ -124,7 +124,7 @@ export default defineConfig(() => {
           // version.json must stay uncached so the app can see a new build over the network.
           // index.html is omitted: Cloudflare Pages 308s /index.html to /, which makes
           // precache install fail and silently drops the update.
-          // Word mp3s are runtime-cached (CacheFirst, 'word-audio-v2') so a new SW stays
+          // Word mp3s are runtime-cached (CacheFirst, 'word-audio-v3') so a new SW stays
           // small and can install quickly; first offline play of an unheard word needs a network fetch.
           // Cache name is versioned so a voice/asset regen is fetched fresh after update.
           globIgnores: ['**/version.json', '**/index.html', '**/*.mp3'],
@@ -141,7 +141,7 @@ export default defineConfig(() => {
               urlPattern: /\/audio\/.*\.mp3(\?.*)?$/i,
               handler: 'CacheFirst',
               options: {
-                cacheName: 'word-audio-v2',
+                cacheName: 'word-audio-v3',
                 expiration: {
                   maxEntries: 400,
                   maxAgeSeconds: 60 * 60 * 24 * 365,

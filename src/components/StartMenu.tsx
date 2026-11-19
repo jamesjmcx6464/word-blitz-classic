@@ -181,26 +181,21 @@ export const StartMenu: React.FC<StartMenuProps> = ({
         </div>
 
         {/* 3. Solo Play & Team Play Buttons */}
-        <div className="start-menu-modes w-full grid grid-cols-2 gap-2.5 sm:gap-3 shrink-0">
+        <div className="start-menu-modes w-full grid grid-cols-2 gap-2 sm:gap-2.5 shrink-0">
           {/* Solo Play */}
           <button
             type="button"
             onClick={onOpenSoloSetup}
-            className="start-menu-mode w-full min-h-[70px] p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border-2 border-indigo-500/40 hover:border-indigo-400 text-white flex items-center gap-3 shadow-md shadow-indigo-500/10 transition-all cursor-pointer active:scale-[0.98] text-left group"
+            className="start-menu-mode w-full min-h-[48px] sm:min-h-[52px] px-3 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border-2 border-indigo-500/40 hover:border-indigo-400 text-white flex items-center gap-2.5 shadow-md shadow-indigo-500/10 transition-all cursor-pointer active:scale-[0.98] text-left group"
           >
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-indigo-500/20 border border-indigo-400/50 flex items-center justify-center text-indigo-400 shrink-0 group-hover:scale-105 transition-transform">
-              <User className="w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-500/20 border border-indigo-400/50 flex items-center justify-center text-indigo-400 shrink-0 group-hover:scale-105 transition-transform">
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="font-display font-black text-base sm:text-lg text-white block leading-tight whitespace-nowrap">
-                  Solo Play
-                </span>
-                <ArrowRight className="mode-arrow w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition-transform shrink-0" />
-              </div>
-              <span className="mode-sub text-xs text-indigo-300 font-semibold block mt-0.5 leading-snug">
-                Name &amp; Unique Logo
+            <div className="min-w-0 flex-1 flex items-center justify-between gap-1">
+              <span className="font-display font-black text-sm sm:text-base text-white leading-tight whitespace-nowrap">
+                Solo Play
               </span>
+              <ArrowRight className="mode-arrow w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition-transform shrink-0" />
             </div>
           </button>
 
@@ -208,21 +203,16 @@ export const StartMenu: React.FC<StartMenuProps> = ({
           <button
             type="button"
             onClick={onOpenTeamSetup}
-            className="start-menu-mode w-full min-h-[70px] p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border-2 border-emerald-500/40 hover:border-emerald-400 text-white flex items-center gap-3 shadow-md shadow-emerald-500/10 transition-all cursor-pointer active:scale-[0.98] text-left group"
+            className="start-menu-mode w-full min-h-[48px] sm:min-h-[52px] px-3 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border-2 border-emerald-500/40 hover:border-emerald-400 text-white flex items-center gap-2.5 shadow-md shadow-emerald-500/10 transition-all cursor-pointer active:scale-[0.98] text-left group"
           >
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="font-display font-black text-base sm:text-lg text-white block leading-tight whitespace-nowrap">
-                  Team Play
-                </span>
-                <ArrowRight className="mode-arrow w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform shrink-0" />
-              </div>
-              <span className="mode-sub text-xs text-emerald-300 font-semibold block mt-0.5 leading-snug">
-                Classroom Team Match
+            <div className="min-w-0 flex-1 flex items-center justify-between gap-1">
+              <span className="font-display font-black text-sm sm:text-base text-white leading-tight whitespace-nowrap">
+                Team Play
               </span>
+              <ArrowRight className="mode-arrow w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform shrink-0" />
             </div>
           </button>
         </div>
@@ -231,21 +221,16 @@ export const StartMenu: React.FC<StartMenuProps> = ({
         <button
           type="button"
           onClick={onOpenAdventureSetup}
-          className="w-full min-h-[64px] p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-fuchsia-600/90 via-violet-600/90 to-indigo-600/90 hover:from-fuchsia-500 hover:to-indigo-500 border-2 border-fuchsia-300/40 text-white flex items-center gap-3 shadow-md shadow-fuchsia-500/20 transition-all cursor-pointer active:scale-[0.98] text-left group shrink-0"
+          className="start-menu-adventure w-full min-h-[48px] sm:min-h-[52px] px-3 py-2 rounded-2xl bg-gradient-to-r from-fuchsia-600/90 via-violet-600/90 to-indigo-600/90 hover:from-fuchsia-500 hover:to-indigo-500 border-2 border-fuchsia-300/40 text-white flex items-center gap-2.5 shadow-md shadow-fuchsia-500/20 transition-all cursor-pointer active:scale-[0.98] text-left group shrink-0"
         >
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/15 border border-white/30 flex items-center justify-center text-amber-300 shrink-0 group-hover:scale-105 transition-transform">
-            <Map className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/15 border border-white/30 flex items-center justify-center text-amber-300 shrink-0 group-hover:scale-105 transition-transform">
+            <Map className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between">
-              <span className="font-display font-black text-base sm:text-lg text-white block leading-tight">
-                Adventure Mode
-              </span>
-              <ArrowRight className="mode-arrow w-4 h-4 text-amber-200 group-hover:translate-x-1 transition-transform shrink-0" />
-            </div>
-            <span className="mode-sub text-xs text-fuchsia-100/90 font-semibold block mt-0.5 leading-snug">
-              Spark · Phonics map &amp; emoji spelling
+          <div className="min-w-0 flex-1 flex items-center justify-between gap-1">
+            <span className="font-display font-black text-sm sm:text-base text-white leading-tight">
+              Adventure Mode
             </span>
+            <ArrowRight className="mode-arrow w-4 h-4 text-amber-200 group-hover:translate-x-1 transition-transform shrink-0" />
           </div>
         </button>
 

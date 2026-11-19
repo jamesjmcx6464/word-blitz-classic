@@ -85,9 +85,6 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
           <div className="font-display font-black text-lg sm:text-xl text-white leading-tight">
             Spark Adventure
           </div>
-          <div className="text-xs font-semibold text-amber-400 truncate">
-            Kindergarten · Short vowels
-          </div>
         </div>
         <div className="flex items-center gap-2 min-h-[44px] px-3 rounded-2xl bg-slate-900 border border-slate-700">
           <span className="text-xl">{playerLogo}</span>
@@ -98,10 +95,6 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
       </header>
 
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4 py-4">
-        <p className="text-xs sm:text-sm text-slate-400 font-medium text-center max-w-md">
-          Clear all five vowel levels, then take on the Boss. Tap a tile to play.
-        </p>
-
         {/* Map layout: 5 vowels around boss */}
         <div className="relative w-full max-w-md aspect-square max-h-[min(68vh,420px)]">
           {/* connector lines */}
