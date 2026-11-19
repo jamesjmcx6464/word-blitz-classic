@@ -24,6 +24,9 @@ DEFAULT_RATE = "-15%"
 DEFAULT_CONCURRENCY = 6
 RETRIES = 4
 
+# Per-word voice overrides (James picked these by ear).
+VOICE_OVERRIDES = {"man": "en-US-EmmaNeural"}
+
 WORD_RE = re.compile(r'"word":\s*"([a-z]+)"')
 
 
@@ -47,7 +50,7 @@ async def synthesize(
     for attempt in range(1, RETRIES + 1):
         try:
             async with sem:
-                communicate = edge_tts.Communicate(word, voice, rate=rate)
+                communicate = edge_tts.Communicate(word, VOICE_OVERRIDES.get(word, voice), rate=rate)
                 await communicate.save(str(tmp))
             if not tmp.exists() or tmp.stat().st_size == 0:
                 raise RuntimeError("empty output")

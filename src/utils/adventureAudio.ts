@@ -1,7 +1,7 @@
 /** Play pre-rendered word mp3s from public/audio/words/. No speechSynthesis. */
 
 /** Bump this when word audio is regenerated so CacheFirst does not keep stale mp3s. */
-export const WORD_AUDIO_VERSION = 'v3';
+export const WORD_AUDIO_VERSION = 'v4';
 
 let current: HTMLAudioElement | null = null;
 
