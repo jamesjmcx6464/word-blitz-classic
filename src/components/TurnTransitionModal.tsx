@@ -3,6 +3,7 @@ import { useTapReady } from '../hooks/useTapReady';
 import { Play, Trophy, CheckCircle, Clock, Target, Flag } from 'lucide-react';
 import { ClassroomMatchState } from '../types/game';
 import { WordChips } from './WordChips';
+import { getScoreCompliment } from '../utils/scoreCompliment';
 
 interface TurnTransitionModalProps {
   matchState: ClassroomMatchState;
@@ -73,9 +74,14 @@ export const TurnTransitionModal: React.FC<TurnTransitionModalProps> = ({
                   </span>
                 </div>
 
-                <span className="font-mono font-black text-xl text-emerald-400">
-                  +{lastTurnSummary.pointsEarned.toLocaleString()} pts
-                </span>
+                <div className="text-right">
+                  <span className="font-mono font-black text-xl text-emerald-400 block">
+                    +{lastTurnSummary.pointsEarned.toLocaleString()} pts
+                  </span>
+                  <span className="text-xs font-display font-black text-amber-300">
+                    {getScoreCompliment(lastTurnSummary.pointsEarned)}
+                  </span>
+                </div>
               </div>
 
               <div className="pt-1">

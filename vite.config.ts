@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, type Plugin} from 'vite';
 import {execSync} from 'child_process';
 import {VitePWA} from 'vite-plugin-pwa';
 
@@ -15,13 +15,28 @@ function buildVersion(): string {
   }
 }
 
+/** Write version.json at build time so the installed app can compare versions over the network. */
+function emitVersionJson(version: string): Plugin {
+  return {
+    name: 'emit-version-json',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({version}),
+      });
+    },
+  };
+}
+
 export default defineConfig(() => {
   return {
     plugins: [
       react(),
       tailwindcss(),
+      emitVersionJson(buildVersion()),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         includeAssets: [
           'favicon.ico',
           'favicon-32.png',
@@ -68,6 +83,8 @@ export default defineConfig(() => {
         workbox: {
           cleanupOutdatedCaches: true,
           // Dictionary (words.json) is bundled into the JS build and precached with it.
+          // version.json must stay uncached so the app can see a new build over the network.
+          globIgnores: ['**/version.json'],
           globPatterns: [
             '**/*.{js,css,html,ico,png,svg,webmanifest,json,woff,woff2,ttf,webp}',
           ],

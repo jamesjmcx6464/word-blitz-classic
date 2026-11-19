@@ -80,6 +80,7 @@ import { WordHistoryModal } from './components/WordHistoryModal';
 import { TurnTransitionModal } from './components/TurnTransitionModal';
 import { ClassroomVictoryModal } from './components/ClassroomVictoryModal';
 import { ClassroomScoreboardModal } from './components/ClassroomScoreboardModal';
+import { UpdateBanner } from './components/UpdateBanner';
 import { PlayNowModal } from './components/PlayNowModal';
 import { SoloPlayerSetupModal } from './components/SoloPlayerSetupModal';
 import confetti from 'canvas-confetti';
@@ -777,7 +778,7 @@ export default function App() {
         if (prev === null) return null;
         if (prev <= 1) {
           clearInterval(timer);
-          triggerGameOver("Time's up! Outstanding run!");
+          triggerGameOver("Time's up!");
           return 0;
         }
         return prev - 1;
@@ -1812,6 +1813,8 @@ export default function App() {
           onFinishMatchEarly={() => setScreen('CLASSROOM_VICTORY')}
         />
       )}
+
+      <UpdateBanner allowed={screen !== 'PLAYING'} />
 
       {/* Game Over Modal (Quick Play) */}
       {screen === 'GAMEOVER' && (

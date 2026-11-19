@@ -4,6 +4,7 @@ import { Play, Trophy, Home, Sparkles, ChevronDown, ChevronUp } from 'lucide-rea
 import confetti from 'canvas-confetti';
 import { WordEntry } from '../types/game';
 import { WordChips } from './WordChips';
+import { getScoreCompliment } from '../utils/scoreCompliment';
 
 interface GameOverModalProps {
   finalScore: number;
@@ -32,8 +33,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 }) => {
   const tapReady = useTapReady(600);
   const isTimeOut = /time/i.test(reason);
-  const title = isTimeOut ? "Time's up!" : 'Nice try!';
-  const reasonText = isTimeOut ? reason : 'The letters reached the top!';
+  const title = getScoreCompliment(finalScore);
+  const reasonText = isTimeOut ? null : 'The letters reached the top!';
   const hasWords = wordEntries.length > 0;
   const [wordsOpen, setWordsOpen] = useState(true);
 
@@ -65,12 +66,20 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           </div>
         ) : null}
 
+        {isTimeOut && (
+          <p className="text-xs sm:text-sm font-display font-black uppercase tracking-widest text-amber-400/90 mb-1 shrink-0">
+            Time's up!
+          </p>
+        )}
         <h2 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight mb-1 shrink-0">
           {title}
         </h2>
-        <p className="text-sm sm:text-base text-slate-400 font-medium mb-3 shrink-0">
-          {reasonText}
-        </p>
+        {reasonText && (
+          <p className="text-sm sm:text-base text-slate-400 font-medium mb-3 shrink-0">
+            {reasonText}
+          </p>
+        )}
+        {!reasonText && <div className="mb-3 shrink-0" />}
 
         <div className="w-full min-h-0 rounded-3xl bg-gradient-to-b from-amber-500/20 via-slate-900 to-slate-950/60 border border-amber-400/40 p-4 sm:p-5 mb-4 flex flex-col">
           <span className="text-[11px] font-display font-black text-amber-400 uppercase tracking-widest block shrink-0">

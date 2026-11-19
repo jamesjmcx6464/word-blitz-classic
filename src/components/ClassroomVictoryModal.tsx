@@ -4,6 +4,7 @@ import { Trophy, Medal, Star, RotateCcw, Users, Home, Award } from 'lucide-react
 import confetti from 'canvas-confetti';
 import { ClassroomMatchState, ClassroomTeam } from '../types/game';
 import { WordChips } from './WordChips';
+import { getScoreCompliment } from '../utils/scoreCompliment';
 
 interface ClassroomVictoryModalProps {
   matchState: ClassroomMatchState;
@@ -69,6 +70,9 @@ export const ClassroomVictoryModal: React.FC<ClassroomVictoryModalProps> = ({
           <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight">
             {winner.name} Wins!
           </h1>
+          <p className="text-lg sm:text-xl font-display font-black text-amber-300">
+            {getScoreCompliment(winner.score)}
+          </p>
           <p className="text-sm font-semibold text-slate-300">
             Fantastic effort from all {config.teams.length} teams across {config.totalRounds} {config.totalRounds === 1 ? 'round' : 'rounds'}!
           </p>
