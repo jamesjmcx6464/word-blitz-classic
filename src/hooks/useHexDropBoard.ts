@@ -205,17 +205,31 @@ export function useHexDropBoard(geometry: HexDropGeometry | null) {
     [kick, publish]
   );
 
-  // Board resized (rotation, window resize): re-drop the remaining letters to fit.
+  // Board resized. Only a change in width or tile size (rotation, window resize)
+  // needs a fresh layout. A height-only change (e.g. the feedback line under the
+  // spelled word appearing) just moves the ground, so shift every tile by the same
+  // amount and keep the board exactly as it is - never re-drop from the top.
   const geoKey = geometry ? `${geometry.boardWidth}|${geometry.groundY}|${geometry.tileRadius}` : '';
   const prevKeyRef = useRef(geoKey);
   useEffect(() => {
+    const prev = geoRef.current;
     geoRef.current = geometry;
-    if (prevKeyRef.current !== geoKey) {
-      prevKeyRef.current = geoKey;
-      if (lettersRef.current.length > 0) layout(lettersRef.current);
+    if (prevKeyRef.current === geoKey) return;
+    prevKeyRef.current = geoKey;
+    if (!geometry || lettersRef.current.length === 0) return;
+    if (prev && prev.boardWidth === geometry.boardWidth && prev.tileRadius === geometry.tileRadius) {
+      const dy = geometry.groundY - prev.groundY;
+      if (dy !== 0) {
+        const shift = (t: HexTile) => ({ ...t, y: t.y + dy, targetY: t.targetY + dy });
+        frozenRef.current = frozenRef.current.map(shift);
+        fallingRef.current = fallingRef.current.map(shift);
+        publish();
+      }
+      return;
     }
+    layout(lettersRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geoKey, layout]);
+  }, [geoKey, layout, publish]);
 
   useEffect(
     () => () => {

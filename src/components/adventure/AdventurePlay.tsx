@@ -125,10 +125,17 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
     [rounds, dropLetters]
   );
 
+  // Spawn round 0 exactly once per level instance (guarded so a re-render or a
+  // StrictMode double effect can never re-drop the letters from the top).
+  const spawnedRef = useRef<string | null>(null);
   useEffect(() => {
-    setupRound(0, seed);
-    return () => stopWordAudio();
+    const key = `${seed}-0`;
+    if (spawnedRef.current !== key) {
+      spawnedRef.current = key;
+      setupRound(0, seed);
+    }
   }, [setupRound, seed]);
+  useEffect(() => () => stopWordAudio(), []);
 
   useEffect(() => {
     onRoundActiveChange?.(phase === 'playing');
@@ -325,15 +332,15 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
             {spelled || '· · ·'}
           </span>
         </div>
-        {feedback && (
-          <div
-            className={`text-sm font-bold ${
-              feedback.startsWith('Nice') ? 'text-emerald-400' : 'text-rose-300'
-            }`}
-          >
-            {feedback}
-          </div>
-        )}
+        {/* Fixed-height slot so feedback never resizes the board below */}
+        <div
+          aria-live="polite"
+          className={`h-5 leading-5 text-sm font-bold ${
+            feedback?.startsWith('Nice') ? 'text-emerald-400' : 'text-rose-300'
+          }`}
+        >
+          {feedback ?? ''}
+        </div>
         <div className="flex items-center gap-2 w-full max-w-md">
           <button
             type="button"
