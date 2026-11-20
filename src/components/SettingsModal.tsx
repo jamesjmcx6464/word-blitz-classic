@@ -15,7 +15,9 @@ import {
   SOUND_FOCUS,
   SoundFocusId,
   isStandardLetterMix,
+  toggleSound,
 } from '../utils/letterDistributions';
+import { soundFocusSamples } from '../data/phonicsLists';
 
 interface SettingsModalProps {
   /** Saved custom settings, or null when none are saved yet. */
@@ -104,18 +106,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const selectPreset = (preset: LetterPresetId) => {
-    onChangeLetterDist({ preset, sound: null });
+    onChangeLetterDist({ preset, sounds: [] });
   };
 
+  // Multi-select: each chip toggles its focus on or off.
   const selectSound = (sound: SoundFocusId) => {
-    onChangeLetterDist({ ...letterDist, sound });
+    onChangeLetterDist(toggleSound(letterDist, sound));
   };
 
   const resetLetters = () => {
     onChangeLetterDist({ ...DEFAULT_LETTER_DISTRIBUTION });
   };
 
-  const activeSound = letterDist.sound ? SOUND_FOCUS[letterDist.sound] : null;
+  const activeSounds = letterDist.sounds.map((id) => SOUND_FOCUS[id]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-4 bg-slate-950/85 backdrop-blur-md select-none text-slate-100 animate-fade-in">
@@ -242,7 +245,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div role="radiogroup" aria-label="Letter mix presets" className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {LETTER_PRESET_IDS.map((id) => {
                     const meta = PRESET_META[id];
-                    const active = letterDist.sound === null && letterDist.preset === id;
+                    const active = letterDist.sounds.length === 0 && letterDist.preset === id;
                     return (
                       <button
                         key={id}
@@ -272,7 +275,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <section>
                 <h3 className="text-sm font-display font-black text-white mb-1">Sound focus</h3>
                 <p className="text-[11px] text-slate-400 font-medium mb-2.5">
-                  Practice one phonics sound. Letters come from short words with that sound.
+                  Pick one or more sounds. Letters come from short words with those sounds.
                 </p>
                 <div className="space-y-3">
                   {SOUND_GROUPS.map((group) => (
@@ -280,18 +283,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
                         {group.label}
                       </div>
-                      <div role="radiogroup" aria-label={group.label} className="flex flex-wrap gap-1.5">
+                      <div role="group" aria-label={group.label} className="flex flex-wrap gap-1.5">
                         {group.ids.map((id) => {
                           const def = SOUND_FOCUS[id];
-                          const active = letterDist.sound === id;
+                          const active = letterDist.sounds.includes(id);
                           return (
                             <button
                               key={id}
                               type="button"
-                              role="radio"
+                              role="checkbox"
                               aria-checked={active}
+                              data-testid={`sound-chip-${id}`}
                               onClick={() => selectSound(id)}
-                              className={`min-h-[44px] min-w-[44px] px-3 rounded-xl border-2 font-display font-black text-sm transition-all cursor-pointer active:scale-95 ${
+                              className={`min-h-[40px] min-w-[44px] px-2.5 rounded-xl border-2 font-display font-black text-sm transition-all cursor-pointer active:scale-95 ${
                                 active
                                   ? 'bg-sky-500 border-sky-300 text-white shadow-md shadow-sky-500/20'
                                   : 'bg-slate-800/80 border-slate-700/80 text-slate-200 hover:bg-slate-800 hover:border-slate-600'
@@ -306,14 +310,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ))}
                 </div>
 
-                {activeSound && (
-                  <div className="mt-3 px-3 py-2.5 rounded-xl bg-sky-500/10 border border-sky-400/30">
-                    <div className="text-[11px] font-bold text-sky-300 mb-1">
-                      Try words with {activeSound.label}
-                    </div>
-                    <p className="text-sm font-bold text-white tracking-wide">
-                      {activeSound.samples.map((w) => w.toLowerCase()).join(' · ')}
-                    </p>
+                {activeSounds.length > 0 && (
+                  <div data-testid="sound-samples" className="mt-3 px-3 py-2.5 rounded-xl bg-sky-500/10 border border-sky-400/30 space-y-2">
+                    {activeSounds.map((def) => (
+                      <div key={def.id}>
+                        <div className="text-[11px] font-bold text-sky-300 mb-0.5">Try words with {def.label}</div>
+                        <p className="text-sm font-bold text-white tracking-wide leading-snug">
+                          {soundFocusSamples(def.id).map((w) => w.toLowerCase()).join(' · ')}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 )}
               </section>

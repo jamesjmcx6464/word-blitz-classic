@@ -16,8 +16,8 @@ eq('beginner par3: 3→150 4→225 2→0', [G(3, 3, B), G(4, 3, B), G(2, 3, B)],
 eq('easy par4: 3→60 2→0', [G(3, 4, E), G(2, 4, E)], [60, 0]);
 eq('overflow carries: 1x 90% + beginner 4-letter par3 → 315', W(90, 4, 3, B), 315);
 eq('cap at 4x', W(580, 7, 3, N), 600);
-eq('par map', [{ preset: 'standard', sound: null }, { preset: 'cvc', sound: null }, { preset: 'blends', sound: null },
-  { preset: 'standard', sound: 'u-e' }, { preset: 'standard', sound: 'ay' }, { preset: 'standard', sound: 'short-a' }, { preset: 'standard', sound: 'ck' }]
+eq('par map', [{ preset: 'standard', sounds: [] }, { preset: 'cvc', sounds: [] }, { preset: 'blends', sounds: [] },
+  { preset: 'standard', sounds: ['u-e'] }, { preset: 'standard', sounds: ['ay'] }, { preset: 'standard', sounds: ['short-a'] }, { preset: 'standard', sounds: ['ck'] }]
   .map((m) => chargeParFor(m as never)), [3, 3, 4, 4, 3, 3, 4]);
 // Custom heuristic
 eq('custom default (= Normal settings) → 7', customParsToMax(DEF), 7);

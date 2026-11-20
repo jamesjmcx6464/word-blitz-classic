@@ -36,15 +36,18 @@ const PAR_4_SOUNDS = new Set([
   'blends',
   'oo', 'ee', 'ea', 'ai', 'oa', 'ou',
   'ar', 'or', 'er',
-  'sh', 'ch', 'th', 'ck', 'ng',
+  'sh', 'ch', 'th', 'wh', 'ck', 'ng',
   'a-e', 'i-e', 'o-e', 'u-e',
+  'bl', 'cl', 'fl', 'gl', 'pl', 'sl', 'br', 'cr', 'dr', 'fr', 'gr', 'tr', 'sp', 'st', 'sw',
+  '-nd', '-nk', '-nt', '-mp', '-st',
 ]);
 
 export type ParLength = 3 | 4;
 
 export function chargeParFor(mix: LetterDistributionSettings): ParLength {
-  const id = mix.sound ?? mix.preset;
-  return PAR_4_SOUNDS.has(id) ? 4 : 3;
+  // Several focuses: the longest par among them.
+  if (mix.sounds.length) return mix.sounds.some((id) => PAR_4_SOUNDS.has(id)) ? 4 : 3;
+  return PAR_4_SOUNDS.has(mix.preset) ? 4 : 3;
 }
 
 // ---------------------------------------------------------------------------

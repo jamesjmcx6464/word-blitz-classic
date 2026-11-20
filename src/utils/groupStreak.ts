@@ -56,6 +56,7 @@ const SOUND_SUBSTRING: Partial<Record<SoundFocusId, string[]>> = {
   th: ['TH'],
   ck: ['CK'],
   ng: ['NG'],
+  wh: ['WH'],
 };
 
 /**
@@ -150,6 +151,9 @@ export function isBlendDigraphWord(word: string): boolean {
 export function isSoundFocusWord(word: string, sound: SoundFocusId): boolean {
   const w = normalizeWord(word);
   if (w.length < 2) return false;
+  // Final blends ('-nd'): the word ends with the blend. Initial blends ('bl'): it starts with it.
+  if (sound.startsWith('-')) return w.endsWith(sound.slice(1).toUpperCase());
+  if (SOUND_FOCUS[sound].group === 'Initial blends') return w.startsWith(sound.toUpperCase());
   if (sound.startsWith('short-')) {
     const v = sound.slice(-1).toUpperCase() as 'A' | 'E' | 'I' | 'O' | 'U';
     return isShortVowelWord(w, v);
@@ -177,7 +181,7 @@ export function isPresetGroupWord(word: string, preset: LetterPresetId): boolean
 /** False on Standard (streak is off). */
 export function isWordInGroup(word: string, settings: LetterDistributionSettings): boolean {
   if (isStandardLetterMix(settings)) return false;
-  if (settings.sound) return isSoundFocusWord(word, settings.sound);
+  if (settings.sounds.length) return settings.sounds.some((s) => isSoundFocusWord(word, s));
   return isPresetGroupWord(word, settings.preset);
 }
 
