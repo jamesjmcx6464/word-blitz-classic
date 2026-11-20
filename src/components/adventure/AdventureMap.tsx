@@ -1,49 +1,71 @@
 import React from 'react';
-import { ArrowLeft, Lock, Play, Star, Zap } from 'lucide-react';
+import { Lock, Play, Star, Zap } from 'lucide-react';
 import {
+  AdventureBandId,
   AdventureLevelDef,
-  AdventureLevelId,
-  SPARK_LEVELS,
+  getBandDef,
 } from '../../utils/adventureConfig';
 import {
   AdventureCharacterProgress,
+  getBandScore,
   getBonusBest,
-  getEarnedStickers,
-  getSparkScore,
+  getTotalAdventureScore,
+  isBandBossPassed,
   isBonusUnlocked,
   isBossUnlocked,
   isLevelPassed,
 } from '../../utils/adventureProgress';
 import { AdventureStickerBadge } from './AdventureStickerBadge';
+import { AdventureHeader } from './AdventureHeader';
 import { bonusSecondsFor } from '../../utils/adventureConfig';
 
 interface AdventureMapProps {
   playerName: string;
   playerLogo: string;
   progress: AdventureCharacterProgress;
+  band: AdventureBandId;
   onBack: () => void;
   onSelectLevel: (level: AdventureLevelDef) => void;
   onPlayBonus?: (level: AdventureLevelDef) => void;
 }
 
-const VOWELS = SPARK_LEVELS.filter((l) => l.kind === 'vowel');
-const BOSS = SPARK_LEVELS.find((l) => l.kind === 'boss')!;
+/** Tile spots around the Boss: [line end x, line end y, wrapper classes]. */
+const SPOTS: Record<number, [number, number, string][]> = {
+  5: [
+    [50, 18, 'left-1/2 top-0 -translate-x-1/2'],
+    [82, 38, 'right-[2%] top-[28%]'],
+    [72, 78, 'right-[12%] bottom-[8%]'],
+    [28, 78, 'left-[12%] bottom-[8%]'],
+    [18, 38, 'left-[2%] top-[28%]'],
+  ],
+  4: [
+    [30, 30, 'left-[3%] top-[3%]'],
+    [70, 30, 'right-[3%] top-[3%]'],
+    [70, 72, 'right-[3%] bottom-[8%]'],
+    [30, 72, 'left-[3%] bottom-[8%]'],
+  ],
+};
 
 export const AdventureMap: React.FC<AdventureMapProps> = ({
   playerName,
   playerLogo,
   progress,
+  band,
   onBack,
   onSelectLevel,
   onPlayBonus,
 }) => {
-  const bossOpen = isBossUnlocked(progress);
-  const sparkScore = getSparkScore(progress);
+  const bandDef = getBandDef(band);
+  const LESSONS = bandDef.levels.filter((l) => l.kind !== 'boss');
+  const BOSS = bandDef.levels.find((l) => l.kind === 'boss')!;
+  const spots = SPOTS[LESSONS.length] ?? SPOTS[5];
+  const bossOpen = isBossUnlocked(progress, band);
+  const bandScore = getBandScore(progress, band);
 
   /** Bonus Blitz chip under a level tile: locked until the level is beaten, then shows its best. */
   const renderBonus = (level: AdventureLevelDef) => {
-    const unlocked = isBonusUnlocked(progress, level.id);
-    const best = getBonusBest(progress, level.id);
+    const unlocked = isBonusUnlocked(progress, level);
+    const best = getBonusBest(progress, level);
     if (!unlocked) {
       return (
         <span
@@ -73,7 +95,7 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
   };
 
   const renderTile = (level: AdventureLevelDef, className: string) => {
-    const passed = isLevelPassed(progress, level.id as AdventureLevelId);
+    const passed = isLevelPassed(progress, level);
     const locked = level.kind === 'boss' && !bossOpen;
     return (
       <div key={level.id} className="relative">
@@ -114,46 +136,29 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
 
   return (
     <div className="w-full h-full min-h-0 flex flex-col text-slate-100 select-none px-3 sm:px-5 py-3 safe-area-pad">
-      <header className="flex items-center justify-between gap-3 shrink-0 pb-3 border-b border-slate-800/80">
-        <button
-          type="button"
-          onClick={onBack}
-          className="min-h-[44px] min-w-[44px] px-3 rounded-2xl bg-slate-900 border border-slate-700 text-slate-200 flex items-center justify-center gap-2 font-bold text-sm cursor-pointer active:scale-95"
-          aria-label="Back to home"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="hidden sm:inline">Home</span>
-        </button>
-        <div className="text-center min-w-0">
-          <div className="font-display font-black text-lg sm:text-xl text-white leading-tight">
-            Spark Adventure
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 min-h-[44px] pl-3 pr-2 rounded-2xl bg-slate-900 border border-slate-700">
-          <span className="text-xl leading-none">{playerLogo}</span>
-          <span className="font-bold text-sm text-slate-200 max-w-[56px] truncate">
-            {playerName}
-          </span>
-          {getEarnedStickers(progress).map((band) => (
-            <AdventureStickerBadge key={band.id} band={band} />
-          ))}
-        </div>
-      </header>
+      <AdventureHeader
+        playerName={playerName}
+        playerLogo={playerLogo}
+        totalScore={getTotalAdventureScore(progress)}
+        onBack={onBack}
+        backLabel="Back to Adventure Home"
+        title={<span data-testid={`map-title-${band}`}>{bandDef.stickerEmoji} {bandDef.title}</span>}
+      />
 
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4 py-4">
         <div
-          data-testid="spark-score"
+          data-testid={`${band}-score`}
           className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900 border border-amber-400/40 shrink-0"
         >
           <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
           <span className="text-[11px] font-display font-black uppercase tracking-widest text-amber-400">
-            Spark Score
+            {bandDef.title} Score
           </span>
           <span className="font-display font-black text-xl text-amber-300 tabular-nums">
-            {sparkScore.toLocaleString()}
+            {bandScore.toLocaleString()}
           </span>
         </div>
-        {/* Map layout: 5 vowels around boss */}
+        {/* Map layout: lesson levels around the Boss */}
         <div className="relative w-full max-w-md aspect-square max-h-[min(68vh,420px)]">
           {/* connector lines */}
           <svg
@@ -161,13 +166,7 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
             viewBox="0 0 100 100"
             aria-hidden
           >
-            {[
-              [50, 18],
-              [82, 38],
-              [72, 78],
-              [28, 78],
-              [18, 38],
-            ].map(([x, y], i) => (
+            {spots.map(([x, y], i) => (
               <line
                 key={i}
                 x1="50"
@@ -181,21 +180,11 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
             ))}
           </svg>
 
-          <div className="absolute left-1/2 top-0 -translate-x-1/2">
-            {renderTile(VOWELS[0], '')}
-          </div>
-          <div className="absolute right-[2%] top-[28%]">
-            {renderTile(VOWELS[1], '')}
-          </div>
-          <div className="absolute right-[12%] bottom-[8%]">
-            {renderTile(VOWELS[2], '')}
-          </div>
-          <div className="absolute left-[12%] bottom-[8%]">
-            {renderTile(VOWELS[3], '')}
-          </div>
-          <div className="absolute left-[2%] top-[28%]">
-            {renderTile(VOWELS[4], '')}
-          </div>
+          {LESSONS.map((lvl, i) => (
+            <div key={lvl.id} className={`absolute ${spots[i]?.[2] ?? ''}`}>
+              {renderTile(lvl, '')}
+            </div>
+          ))}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
             {renderTile(
               BOSS,
@@ -206,15 +195,13 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
           </div>
         </div>
 
-        {progress.bossPassed && (
+        {isBandBossPassed(progress, band) && (
           <div
-            data-testid="spark-complete"
+            data-testid={`${band}-complete`}
             className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-fuchsia-500/15 border border-fuchsia-400/40 text-fuchsia-200 font-bold text-sm"
           >
-            {getEarnedStickers(progress).map((band) => (
-              <AdventureStickerBadge key={band.id} band={band} />
-            ))}
-            Spark complete — you beat the Boss!
+            <AdventureStickerBadge band={bandDef} />
+            {bandDef.title} complete — you beat the Boss!
           </div>
         )}
       </div>

@@ -14,6 +14,8 @@ import {
   ADVENTURE_MAX_MISSES,
   ADVENTURE_ROUNDS_PER_LEVEL,
   AdventureLevelDef,
+  getBandDef,
+  wordsForBand,
 } from '../../utils/adventureConfig';
 import { playWordAudio, stopWordAudio } from '../../utils/adventureAudio';
 import {
@@ -21,7 +23,7 @@ import {
   buildRoundTiles,
   roundLetterMultiset,
 } from '../../utils/adventureWordSelect';
-import { findOverlaps, sameMultiset } from '../../utils/adventureDrop';
+import { findOverlaps, fitTileRadius, sameMultiset } from '../../utils/adventureDrop';
 import { GameBoard } from '../GameBoard';
 import { HexTile } from '../../types/game';
 import { HexDropGeometry, useHexDropBoard } from '../../hooks/useHexDropBoard';
@@ -31,12 +33,18 @@ import { HEX_RADIUS } from '../../utils/hexPhysics';
 const ADVENTURE_GROUND_H = 44;
 const NO_PULSE = new Set<string>();
 
-/** Fit an SVG board to the measured play area, keeping hexes close to arcade size. */
-function computeGeometry(cw: number, ch: number): HexDropGeometry & { boardHeight: number } {
+/**
+ * Fit an SVG board to the measured play area, keeping hexes close to arcade size.
+ * `maxTiles` is the biggest round in the level: the radius shrinks (a little) only
+ * when that many tiles would otherwise stack above the top of the board.
+ */
+function computeGeometry(cw: number, ch: number, maxTiles: number): HexDropGeometry & { boardHeight: number } {
   const boardWidth = Math.round(Math.max(340, Math.min(720, cw)));
-  const tileRadius = boardWidth < 400 ? 26 : HEX_RADIUS;
+  const baseRadius = boardWidth < 400 ? 26 : HEX_RADIUS;
   const boardHeight = Math.round(Math.max(200, (ch * boardWidth) / Math.max(1, cw)));
-  return { boardWidth, boardHeight, groundY: boardHeight - ADVENTURE_GROUND_H, tileRadius };
+  const groundY = boardHeight - ADVENTURE_GROUND_H;
+  const tileRadius = fitTileRadius(boardWidth, groundY, maxTiles, baseRadius);
+  return { boardWidth, boardHeight, groundY, tileRadius };
 }
 
 interface AdventurePlayProps {
@@ -63,7 +71,12 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
     [level.id]
   );
 
-  const [rounds] = useState(() => buildLevelRounds(level.soundGroup, seed));
+  const bandDef = getBandDef(level.band);
+  const [rounds] = useState(() => buildLevelRounds(level.soundGroup, seed, wordsForBand(level.band)));
+  const maxTiles = useMemo(
+    () => Math.max(1, ...rounds.map((r) => roundLetterMultiset(r).length)),
+    [rounds]
+  );
   const [roundIndex, setRoundIndex] = useState(0);
   const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -83,7 +96,7 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
       const r = el.getBoundingClientRect();
       if (r.width < 40 || r.height < 40) return;
       setGeometry((prev) => {
-        const next = computeGeometry(r.width, r.height);
+        const next = computeGeometry(r.width, r.height, maxTiles);
         if (
           prev &&
           prev.boardWidth === next.boardWidth &&
@@ -99,7 +112,7 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [phase]);
+  }, [phase, maxTiles]);
 
   const { frozenTiles, fallingTiles, settled, dropLetters, clearTiles } = useHexDropBoard(geometry);
   const allTiles = useMemo(() => [...frozenTiles, ...fallingTiles], [frozenTiles, fallingTiles]);
@@ -283,11 +296,11 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
         <p className="text-sm text-slate-400 max-w-sm">
           {passed
             ? isBoss
-              ? 'You beat the Spark Boss! Spark is complete.'
+              ? `You beat the ${bandDef.title} Boss! ${bandDef.title} is complete.`
               : `Great spelling on ${level.title}.`
             : isBoss
               ? `Three misses — replay the Boss when you are ready.`
-              : `Spark levels allow ${ADVENTURE_MAX_MISSES} mistake${ADVENTURE_MAX_MISSES === 1 ? '' : 's'}. You had ${misses}.`}
+              : `${bandDef.title} levels allow ${ADVENTURE_MAX_MISSES} mistake${ADVENTURE_MAX_MISSES === 1 ? '' : 's'}. You had ${misses}.`}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
           <button

@@ -581,12 +581,12 @@ export default function App() {
     const reasonText = customReason || 'The letters reached the top!';
     setGameOverReason(reasonText);
 
-    // Spark bonus Blitz: save the best score to adventure progress, not the arcade leaderboards.
+    // Adventure bonus Blitz: save the best score to adventure progress, not the arcade leaderboards.
     const bonus = bonusRunRef.current;
     if (bonus) {
       const player = adventurePlayerRef.current;
       if (player) {
-        const res = recordBonusScore(player.name, player.logo, bonus.level.id, scoreRef.current);
+        const res = recordBonusScore(player.name, player.logo, bonus.level, scoreRef.current);
         setBonusResult({ best: res.best, isNewBest: res.isNewBest && scoreRef.current > 0 });
       } else {
         setBonusResult({ best: scoreRef.current, isNewBest: false });
@@ -1754,9 +1754,11 @@ export default function App() {
             onRoundActiveChange={setAdventureRoundActive}
             onPlayBonus={handleStartBonus}
             onExit={() => {
+              // Back from Adventure Home returns to the adventurer sign-in.
               setAdventurePlayer(null);
               setAdventureRoundActive(false);
               setScreen('MENU');
+              setIsAdventureSetupOpen(true);
             }}
           />
         </div>

@@ -169,3 +169,19 @@ export function sameMultiset(a: Iterable<string>, b: Iterable<string>): boolean 
   for (const [k, v] of ma) if (mb.get(k) !== v) return false;
   return true;
 }
+
+/** Smallest radius we will shrink to so a tall round still fits (arcade "Small" is ~22). */
+export const MIN_FIT_RADIUS = 20;
+
+/**
+ * Largest radius (<= baseRadius) at which `tileCount` tiles, spread over the
+ * columns that fit the board width, stack no higher than the top of the board.
+ */
+export function fitTileRadius(boardWidth: number, groundY: number, tileCount: number, baseRadius: number): number {
+  for (let r = baseRadius; r > MIN_FIT_RADIUS; r--) {
+    const cols = evenColumnCenters(boardWidth, Math.max(1, tileCount), r, COLUMN_GAP).length;
+    const rows = Math.ceil(tileCount / cols);
+    if (rows * rowPitch(r) <= groundY) return r;
+  }
+  return MIN_FIT_RADIUS;
+}

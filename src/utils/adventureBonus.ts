@@ -1,12 +1,9 @@
-import { SPARK_WORDS } from '../data/adventureLexicon';
-import { AdventureLevelDef, BONUS_SEED_CHANCE } from './adventureConfig';
+import { AdventureLevelDef, BONUS_SEED_CHANCE, wordsForLevel } from './adventureConfig';
 import { LetterDrawOptions, LetterWeightTable } from './letterBag';
 
-/** Lesson words (uppercase) for a Spark level; the Boss uses all Spark words. */
+/** Lesson words (uppercase) for a level; a Boss uses every word in its band. */
 export function bonusWordsFor(level: AdventureLevelDef): string[] {
-  const entries = level.soundGroup
-    ? SPARK_WORDS.filter((e) => e.soundGroup === level.soundGroup)
-    : SPARK_WORDS;
+  const entries = wordsForLevel(level);
   return Array.from(new Set(entries.map((e) => e.word.trim().toUpperCase()).filter((w) => /^[A-Z]+$/.test(w))));
 }
 
@@ -19,7 +16,7 @@ export function allowedBonusLetters(level: AdventureLevelDef): Set<string> {
  * Letter draw for a bonus Blitz: a restricted weight table built ONLY from the
  * lesson words' letters (each weighted by how often it appears across them), plus
  * seed-word injection so whole lesson words show up often. No arcade letter mix,
- * so Short E never spawns another vowel and the Boss only uses Spark letters.
+ * so Short E never spawns another vowel and a Boss only uses its band's letters.
  */
 export function bonusLetterDraw(level: AdventureLevelDef): LetterDrawOptions {
   const words = bonusWordsFor(level);

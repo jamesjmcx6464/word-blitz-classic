@@ -233,7 +233,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
               </h2>
               <span className="text-xs font-semibold text-amber-400 block">
                 {isAdventure
-                  ? 'Pick a character for Spark Adventure'
+                  ? 'Pick a character for Adventure'
                   : 'Pick a registered player or add a new student'}
               </span>
             </div>
@@ -321,13 +321,13 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
                     <span className="relative text-3xl drop-shadow mt-0.5">
                       {player.logo}
                       {isAdventure &&
-                        getEarnedStickers(getAdventureProgress(player.name, player.logo)).map((band) => (
-                          <AdventureStickerBadge
-                            key={band.id}
-                            band={band}
-                            className="absolute -top-1 -right-3"
-                          />
-                        ))}
+                        getEarnedStickers(getAdventureProgress(player.name, player.logo)).length > 0 && (
+                          <span className="absolute -top-1 -right-3 flex -space-x-2">
+                            {getEarnedStickers(getAdventureProgress(player.name, player.logo)).map((band) => (
+                              <AdventureStickerBadge key={band.id} band={band} />
+                            ))}
+                          </span>
+                        )}
                     </span>
 
                     <div className="w-full min-w-0">
@@ -384,14 +384,15 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
                   {isAdventure &&
                     getEarnedStickers(
                       getAdventureProgress(selectedExistingPlayer.name, selectedExistingPlayer.logo)
-                    ).map((band) => (
-                      <AdventureStickerBadge
-                        key={band.id}
-                        band={band}
-                        size="md"
-                        className="absolute -top-1 -right-2"
-                      />
-                    ))}
+                    ).length > 0 && (
+                      <span className="absolute -top-1 -right-2 flex -space-x-2">
+                        {getEarnedStickers(
+                          getAdventureProgress(selectedExistingPlayer.name, selectedExistingPlayer.logo)
+                        ).map((band) => (
+                          <AdventureStickerBadge key={band.id} band={band} size="md" />
+                        ))}
+                      </span>
+                    )}
                 </span>
                 <div className="min-w-0">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block">

@@ -3,12 +3,16 @@ import {
   ADVENTURE_PROGRESS_KEY,
   AdventureBandDef,
   AdventureBandId,
+  AdventureLevelDef,
   AdventureLevelId,
   SPARK_LEVELS,
+  levelsForBand,
 } from './adventureConfig';
 
 /** Later bands store their bonus bests here so the total score helper stays band-agnostic. */
 export interface AdventureBandScore {
+  /** Beaten lesson levels (Boss tracked by bossPassed). */
+  passedLevels?: string[];
   bonusBest?: Record<string, number>;
   bossPassed?: boolean;
 }
@@ -94,29 +98,62 @@ export function getAdventureProgress(
   return emptyProgress(name, logo);
 }
 
+/** Spark lives at the top level of the save (older saves); every other band under bands[id]. */
+function bandState(progress: AdventureCharacterProgress, bandId: AdventureBandId): AdventureBandScore {
+  if (bandId === 'spark') {
+    return {
+      passedLevels: progress.passedLevels,
+      bonusBest: progress.bonusBest as Record<string, number> | undefined,
+      bossPassed: progress.bossPassed,
+    };
+  }
+  return progress.bands?.[bandId] ?? {};
+}
+
+function withBandState(
+  progress: AdventureCharacterProgress,
+  bandId: AdventureBandId,
+  state: AdventureBandScore
+): AdventureCharacterProgress {
+  if (bandId === 'spark') {
+    return {
+      ...progress,
+      passedLevels: (state.passedLevels ?? []) as AdventureLevelId[],
+      bossPassed: !!state.bossPassed,
+      bonusBest: state.bonusBest as Partial<Record<AdventureLevelId, number>> | undefined,
+    };
+  }
+  return { ...progress, bands: { ...(progress.bands ?? {}), [bandId]: state } };
+}
+
 export function markLevelPassed(
   name: string,
   logo: string,
-  levelId: AdventureLevelId
+  level: AdventureLevelDef
 ): { progress: AdventureCharacterProgress; stickerJustEarned?: AdventureBandId } {
   const key = playerKey(name, logo);
   const store = readStore();
   const current = store[key] ?? emptyProgress(name, logo);
-  const hadSparkSticker = !!(current.stickers?.spark || current.bossPassed);
-  const passed = new Set(current.passedLevels);
-  if (levelId !== 'boss') passed.add(levelId);
-  const bossPassed = levelId === 'boss' ? true : current.bossPassed;
+  const bandId = level.band;
+  const state = bandState(current, bandId);
+  const hadSticker = hasSticker(current, bandId);
+  const passed = new Set(state.passedLevels ?? []);
+  if (level.kind !== 'boss') passed.add(level.id);
+  const bossPassed = level.kind === 'boss' ? true : !!state.bossPassed;
   const stickerJustEarned: AdventureBandId | undefined =
-    levelId === 'boss' && !hadSparkSticker ? 'spark' : undefined;
+    level.kind === 'boss' && !hadSticker ? bandId : undefined;
+  const updated = withBandState(current, bandId, {
+    ...state,
+    passedLevels: Array.from(passed),
+    bossPassed,
+  });
   const next: AdventureCharacterProgress = {
-    ...current,
+    ...updated,
     name,
     logo,
-    passedLevels: Array.from(passed) as AdventureLevelId[],
-    bossPassed,
     stickers: {
       ...current.stickers,
-      ...(bossPassed ? { spark: true } : {}),
+      ...(bossPassed ? { [bandId]: true } : {}),
     },
     updatedAt: Date.now(),
   };
@@ -125,38 +162,36 @@ export function markLevelPassed(
   return { progress: next, stickerJustEarned };
 }
 
-export function isBossUnlocked(progress: AdventureCharacterProgress): boolean {
-  const vowelIds = SPARK_LEVELS.filter((l) => l.kind === 'vowel').map((l) => l.id);
-  return vowelIds.every((id) => progress.passedLevels.includes(id));
+export function isBossUnlocked(progress: AdventureCharacterProgress, bandId: AdventureBandId = 'spark'): boolean {
+  const passed = bandState(progress, bandId).passedLevels ?? [];
+  return levelsForBand(bandId)
+    .filter((l) => l.kind !== 'boss')
+    .every((l) => passed.includes(l.id));
 }
 
-export function isLevelPassed(
-  progress: AdventureCharacterProgress,
-  levelId: AdventureLevelId
-): boolean {
-  if (levelId === 'boss') return progress.bossPassed;
-  return progress.passedLevels.includes(levelId);
+export function isBandBossPassed(progress: AdventureCharacterProgress, bandId: AdventureBandId): boolean {
+  return !!bandState(progress, bandId).bossPassed;
+}
+
+export function isLevelPassed(progress: AdventureCharacterProgress, level: AdventureLevelDef): boolean {
+  const state = bandState(progress, level.band);
+  if (level.kind === 'boss') return !!state.bossPassed;
+  return (state.passedLevels ?? []).includes(level.id);
 }
 
 /** A level's bonus Blitz unlocks once that level (or the Boss) is beaten. */
-export function isBonusUnlocked(
-  progress: AdventureCharacterProgress,
-  levelId: AdventureLevelId
-): boolean {
-  return isLevelPassed(progress, levelId);
+export function isBonusUnlocked(progress: AdventureCharacterProgress, level: AdventureLevelDef): boolean {
+  return isLevelPassed(progress, level);
 }
 
-export function getBonusBest(
-  progress: AdventureCharacterProgress,
-  levelId: AdventureLevelId
-): number | null {
-  const v = progress.bonusBest?.[levelId];
+export function getBonusBest(progress: AdventureCharacterProgress, level: AdventureLevelDef): number | null {
+  const v = bandState(progress, level.band).bonusBest?.[level.id];
   return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
 /** Spark Adventure score = sum of best bonus scores (5 level blitzes + boss blitz). */
 export function getSparkScore(progress: AdventureCharacterProgress): number {
-  return SPARK_LEVELS.reduce((sum, l) => sum + (getBonusBest(progress, l.id) ?? 0), 0);
+  return SPARK_LEVELS.reduce((sum, l) => sum + (getBonusBest(progress, l) ?? 0), 0);
 }
 
 /** Score for one adventure band. Spark uses top-level bonusBest; later bands use progress.bands. */
@@ -186,12 +221,14 @@ export function hasSticker(progress: AdventureCharacterProgress, bandId: string)
 }
 
 /** Earned completion stickers, including known bands and any extra keys stored on the character. */
-export function getEarnedStickers(progress: AdventureCharacterProgress): AdventureBandDef[] {
+export type AdventureStickerDef = Pick<AdventureBandDef, 'id' | 'title' | 'stickerEmoji'>;
+
+export function getEarnedStickers(progress: AdventureCharacterProgress): AdventureStickerDef[] {
   const known = new Map(ADVENTURE_BANDS.map((b) => [b.id, b]));
   const ids = new Set<string>(ADVENTURE_BANDS.map((b) => b.id));
   for (const id of Object.keys(progress.stickers ?? {})) ids.add(id);
   for (const id of Object.keys(progress.bands ?? {})) ids.add(id);
-  const earned: AdventureBandDef[] = [];
+  const earned: AdventureStickerDef[] = [];
   for (const id of ids) {
     if (!hasSticker(progress, id)) continue;
     earned.push(known.get(id as AdventureBandId) ?? { id: id as AdventureBandId, title: id, stickerEmoji: '⭐' });
@@ -203,24 +240,69 @@ export function getEarnedStickers(progress: AdventureCharacterProgress): Adventu
 export function recordBonusScore(
   name: string,
   logo: string,
-  levelId: AdventureLevelId,
+  level: AdventureLevelDef,
   score: number
 ): { progress: AdventureCharacterProgress; best: number; isNewBest: boolean; previousBest: number | null } {
   const key = playerKey(name, logo);
   const store = readStore();
-  const current = store[key] ?? getAdventureProgress(name, logo);
-  const previousBest = getBonusBest(current, levelId);
+  const current = withDerivedStickers(store[key] ?? getAdventureProgress(name, logo));
+  const previousBest = getBonusBest(current, level);
   const isNewBest = previousBest === null || score > previousBest;
   const best = isNewBest ? score : (previousBest as number);
+  const state = bandState(current, level.band);
   const next: AdventureCharacterProgress = {
-    ...withDerivedStickers(current),
+    ...withBandState(current, level.band, {
+      ...state,
+      bonusBest: { ...(state.bonusBest ?? {}), [level.id]: best },
+    }),
     playerKey: key,
     name,
     logo,
-    bonusBest: { ...(current.bonusBest ?? {}), [levelId]: best },
     updatedAt: Date.now(),
   };
   store[key] = next;
   writeStore(store);
   return { progress: next, best, isNewBest, previousBest };
+}
+
+const LAST_BAND_KEY = 'word_blitz_adventure_band_v1';
+
+/** Which adventure map was open last (so returning from a bonus Blitz lands on the same map). */
+export function getLastAdventureBand(): AdventureBandId {
+  try {
+    const v = localStorage.getItem(LAST_BAND_KEY);
+    if (v && ADVENTURE_BANDS.some((b) => b.id === v)) return v as AdventureBandId;
+  } catch {
+    /* ignore */
+  }
+  return 'spark';
+}
+
+export function setLastAdventureBand(id: AdventureBandId): void {
+  try {
+    localStorage.setItem(LAST_BAND_KEY, id);
+  } catch {
+    /* ignore */
+  }
+}
+
+const RETURN_TO_MAP_KEY = 'word_blitz_adventure_return_to_map';
+
+/** Set when a bonus Blitz starts so finishing it lands back on that map, not Adventure Home. */
+export function markReturnToMap(): void {
+  try {
+    sessionStorage.setItem(RETURN_TO_MAP_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumeReturnToMap(): boolean {
+  try {
+    const v = sessionStorage.getItem(RETURN_TO_MAP_KEY) === '1';
+    sessionStorage.removeItem(RETURN_TO_MAP_KEY);
+    return v;
+  } catch {
+    return false;
+  }
 }

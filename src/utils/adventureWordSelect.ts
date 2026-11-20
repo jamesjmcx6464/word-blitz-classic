@@ -34,16 +34,17 @@ function shuffle<T>(arr: T[], rand: () => number): T[] {
  */
 export function buildLevelRounds(
   soundGroup: string | null,
-  seed: number
+  seed: number,
+  bandWords: AdventureLexiconEntry[] = SPARK_WORDS
 ): AdventureLexiconEntry[][] {
   const rand = mulberry32(seed || 1);
   const pool =
     soundGroup == null
-      ? SPARK_WORDS.slice()
-      : SPARK_WORDS.filter((e) => e.soundGroup === soundGroup);
+      ? bandWords.slice()
+      : bandWords.filter((e) => e.soundGroup === soundGroup);
 
   if (soundGroup == null) {
-    // Boss: fully random from all Spark, no emoji dupes per round.
+    // Boss: fully random from every word in the band, no emoji dupes per round.
     return packRounds(shuffle(pool, rand), rand);
   }
 

@@ -1060,7 +1060,7 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "word": "chin",
     "emoji": "👄",
     "swappableType": "Blends & Digraphs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1A-008",
@@ -1113,9 +1113,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Ending Rules",
     "pattern": "-ck",
     "word": "rock",
-    "emoji": "🪨",
+    "emoji": "⛰️",
     "swappableType": "Blends & Digraphs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1A-013",
@@ -1179,9 +1179,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Ending Rules",
     "pattern": "-ng",
     "word": "wing",
-    "emoji": "🪽",
+    "emoji": "🕊️",
     "swappableType": "Blends & Digraphs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1A-019",
@@ -1223,9 +1223,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Ending Rules",
     "pattern": "-nk",
     "word": "pink",
-    "emoji": "🩷",
+    "emoji": "🌸",
     "swappableType": "Blends & Digraphs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1A-023",
@@ -1410,9 +1410,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Final Blends",
     "pattern": "-nt",
     "word": "plant",
-    "emoji": "🪴",
+    "emoji": "🌿",
     "swappableType": "Blends & Digraphs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1A-040",
@@ -1443,9 +1443,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Final Blends",
     "pattern": "-nd",
     "word": "wand",
-    "emoji": "🪄",
+    "emoji": "✨",
     "swappableType": "Blends & Digraphs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1A-043",
@@ -1454,9 +1454,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Final Blends",
     "pattern": "-st",
     "word": "nest",
-    "emoji": "🪺",
+    "emoji": "🥚",
     "swappableType": "Blends & Digraphs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1A-044",
@@ -3044,3 +3044,17 @@ export const SPARK_SOUND_GROUPS = [
 ] as const;
 
 export type SparkSoundGroup = (typeof SPARK_SOUND_GROUPS)[number];
+
+export const FLAME_WORDS = ADVENTURE_LEXICON.filter((e) => e.band === '1A');
+
+export const FLAME_SOUND_GROUPS = [
+  'Initial Blends',
+  'Final Blends',
+  'Digraphs',
+  'Ending Rules',
+] as const;
+
+/** All lexicon entries for one spreadsheet band (K = Spark, 1A = Flame). */
+export function wordsForLexiconBand(band: AdventureBand): AdventureLexiconEntry[] {
+  return ADVENTURE_LEXICON.filter((e) => e.band === band);
+}

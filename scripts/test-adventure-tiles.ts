@@ -1,9 +1,9 @@
 // Round letter builder + drop physics: every round's tiles are exactly its words' letters,
 // and the column drop never loses, overlaps, or misplaces a tile (even with huge frame stalls).
-import { SPARK_WORDS } from '../src/data/adventureLexicon';
-import { SPARK_LEVELS } from '../src/utils/adventureConfig';
+import { ADVENTURE_LEXICON } from '../src/data/adventureLexicon';
+import { ADVENTURE_BANDS, wordsForBand } from '../src/utils/adventureConfig';
 import { buildLevelRounds, buildRoundTiles, validateRoundTiles, roundLetterMultiset } from '../src/utils/adventureWordSelect';
-import { buildDropTiles, stepDrop, loosenAfterClear, restY, rowPitch, sameMultiset, findOverlaps, DropTile } from '../src/utils/adventureDrop';
+import { buildDropTiles, fitTileRadius, stepDrop, loosenAfterClear, restY, rowPitch, sameMultiset, findOverlaps, DropTile } from '../src/utils/adventureDrop';
 import { findLandingY } from '../src/utils/hexPhysics';
 
 let fails = 0, rounds = 0, sims = 0;
@@ -47,9 +47,13 @@ function checkBoard(tiles: DropTile[], geo: typeof geos[0], want: string[], tag:
   }
 }
 
-for (const level of SPARK_LEVELS) {
+const ALL_LEVELS = ADVENTURE_BANDS.flatMap((b) => b.levels);
+const BAND_WORDS = ADVENTURE_BANDS.flatMap((b) => wordsForBand(b.id));
+for (const level of ALL_LEVELS) {
+  const bandWords = wordsForBand(level.band);
   for (let seed = 1; seed <= 400; seed++) {
-    const lr = buildLevelRounds(level.soundGroup, seed * 7919 + level.id.length);
+    const lr = buildLevelRounds(level.soundGroup, seed * 7919 + level.id.length, bandWords);
+    const maxTiles = Math.max(...lr.map((r) => roundLetterMultiset(r).length));
     lr.forEach((words, idx) => {
       rounds++;
       if (words.length !== 4) fail(`${level.id} ${seed} round ${idx} has ${words.length} words`);
@@ -59,7 +63,9 @@ for (const level of SPARK_LEVELS) {
       const probs = validateRoundTiles(words, specs);
       if (probs.length) fail(`${level.id} ${seed}/${idx} ${probs.join(';')}`);
       if (seed % 8 === 0) {
-        for (const geo of geos) {
+        for (const g of geos) {
+          // Same radius fit AdventurePlay uses, so the biggest round never stacks above the board.
+          const geo = { ...g, tileRadius: fitTileRadius(g.boardWidth, g.groundY, maxTiles, g.tileRadius) };
           sims++;
           let tiles = buildDropTiles(specs, geo, rnd);
           if (tiles.length !== specs.length) fail('drop tile count');
@@ -110,12 +116,22 @@ for (const level of SPARK_LEVELS) {
   if (Math.abs(findLandingY(100, 0, [base], ground, r) - (base.y - 2 * H)) > 0.01) fail('arcade normal landing changed');
   if (Math.abs(findLandingY(300, 0, [base], ground, r) - (ground - H)) > 0.01) fail('arcade ground landing changed');
 }
-const spark = SPARK_WORDS.length;
-if (seen.size !== spark) fail(`only ${seen.size}/${spark} Spark words appeared`);
-// Direct builder check for every single Spark word
-for (const w of SPARK_WORDS) for (let s = 0; s < 50; s++) {
+const spark = BAND_WORDS.length;
+if (seen.size !== spark) fail(`only ${seen.size}/${spark} adventure words appeared`);
+// Every band's words come from the right lexicon band, and levels match the spreadsheet groups.
+for (const b of ADVENTURE_BANDS) {
+  const words = wordsForBand(b.id);
+  if (words.length !== ADVENTURE_LEXICON.filter((e) => e.band === b.lexiconBand).length) fail(`${b.id} word count`);
+  const groups = new Set(words.map((w) => w.soundGroup));
+  const lessonGroups = new Set(b.levels.filter((l) => l.kind !== 'boss').map((l) => l.soundGroup));
+  for (const g of groups) if (!lessonGroups.has(g)) fail(`${b.id} sound group ${g} has no level`);
+  if (b.levels.filter((l) => l.kind === 'boss').length !== 1) fail(`${b.id} needs exactly one Boss`);
+  if (b.levels.some((l) => l.band !== b.id)) fail(`${b.id} level with wrong band`);
+}
+// Direct builder check for every single word
+for (const w of BAND_WORDS) for (let s = 0; s < 50; s++) {
   const p = validateRoundTiles([w], buildRoundTiles([w], s, 'x'));
   if (p.length) fail(`${w.word} ${p}`);
 }
 if (fails) { console.log(`${fails} failures`); process.exit(1); }
-console.log(`ALL PASS (${rounds} rounds built, ${sims} drop sims, ${seen.size}/${spark} Spark words)`);
+console.log(`ALL PASS (${rounds} rounds built, ${sims} drop sims, ${seen.size}/${spark} adventure words, bands ${ADVENTURE_BANDS.map((b) => b.id).join('+')})`);

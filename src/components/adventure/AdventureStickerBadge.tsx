@@ -2,7 +2,7 @@ import React from 'react';
 import { AdventureBandDef } from '../../utils/adventureConfig';
 
 interface AdventureStickerBadgeProps {
-  band: AdventureBandDef;
+  band: Pick<AdventureBandDef, 'id' | 'title' | 'stickerEmoji'>;
   size?: 'sm' | 'md';
   className?: string;
 }

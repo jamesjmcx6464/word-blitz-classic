@@ -1,4 +1,6 @@
-/** Adventure Mode tuning knobs (Spark MVP). */
+import { AdventureLexiconEntry, wordsForLexiconBand } from '../data/adventureLexicon';
+
+/** Adventure Mode tuning knobs (Spark, Flame). */
 
 /** Wrong Enters a vowel level forgives: at most this many and it still passes; one more fails it. */
 export const ADVENTURE_MAX_MISSES = 1;
@@ -10,19 +12,7 @@ export const ADVENTURE_WORDS_PER_LEVEL =
 
 export const ADVENTURE_BOSS_MAX_MISSES = 3;
 
-export type AdventureBandId = 'spark';
-
-export interface AdventureBandDef {
-  id: AdventureBandId;
-  title: string;
-  /** Widely supported emoji (Unicode 13 or older) for the completion sticker. */
-  stickerEmoji: string;
-}
-
-/** Known adventure modes. Later bands (Flame, Blaze, Nova) append here. */
-export const ADVENTURE_BANDS: AdventureBandDef[] = [
-  { id: 'spark', title: 'Spark', stickerEmoji: '✨' },
-];
+export type AdventureBandId = 'spark' | 'flame';
 
 export type AdventureLevelId =
   | 'short-a'
@@ -30,25 +20,84 @@ export type AdventureLevelId =
   | 'short-u'
   | 'short-i'
   | 'short-e'
-  | 'boss';
+  | 'boss'
+  | 'flame-initial-blends'
+  | 'flame-final-blends'
+  | 'flame-digraphs'
+  | 'flame-ending-rules'
+  | 'flame-boss';
 
 export interface AdventureLevelDef {
   id: AdventureLevelId;
+  /** Adventure this level belongs to. */
+  band: AdventureBandId;
   title: string;
   subtitle: string;
-  soundGroup: string | null; // null = Boss (all Spark)
+  soundGroup: string | null; // null = Boss (all words in the band)
   emoji: string;
+  /** 'vowel' = a regular lesson level (1 mistake allowed); 'boss' = the band's Boss. */
   kind: 'vowel' | 'boss';
 }
 
 export const SPARK_LEVELS: AdventureLevelDef[] = [
-  { id: 'short-a', title: 'Short A', subtitle: 'cat · hat · map', soundGroup: 'Short A', emoji: '🅰️', kind: 'vowel' },
-  { id: 'short-o', title: 'Short O', subtitle: 'dog · top · fox', soundGroup: 'Short O', emoji: '🅾️', kind: 'vowel' },
-  { id: 'short-u', title: 'Short U', subtitle: 'bug · sun · cup', soundGroup: 'Short U', emoji: '🇺', kind: 'vowel' },
-  { id: 'short-i', title: 'Short I', subtitle: 'pig · pin · six', soundGroup: 'Short I', emoji: 'ℹ️', kind: 'vowel' },
-  { id: 'short-e', title: 'Short E', subtitle: 'pen · bed · web', soundGroup: 'Short E', emoji: '🇪', kind: 'vowel' },
-  { id: 'boss', title: 'Spark Boss', subtitle: 'All short vowels', soundGroup: null, emoji: '⚡', kind: 'boss' },
+  { id: 'short-a', band: 'spark', title: 'Short A', subtitle: 'cat · hat · map', soundGroup: 'Short A', emoji: '🅰️', kind: 'vowel' },
+  { id: 'short-o', band: 'spark', title: 'Short O', subtitle: 'dog · top · fox', soundGroup: 'Short O', emoji: '🅾️', kind: 'vowel' },
+  { id: 'short-u', band: 'spark', title: 'Short U', subtitle: 'bug · sun · cup', soundGroup: 'Short U', emoji: '🇺', kind: 'vowel' },
+  { id: 'short-i', band: 'spark', title: 'Short I', subtitle: 'pig · pin · six', soundGroup: 'Short I', emoji: 'ℹ️', kind: 'vowel' },
+  { id: 'short-e', band: 'spark', title: 'Short E', subtitle: 'pen · bed · web', soundGroup: 'Short E', emoji: '🇪', kind: 'vowel' },
+  { id: 'boss', band: 'spark', title: 'Spark Boss', subtitle: 'All short vowels', soundGroup: null, emoji: '⚡', kind: 'boss' },
 ];
+
+export const FLAME_LEVELS: AdventureLevelDef[] = [
+  { id: 'flame-initial-blends', band: 'flame', title: 'Blends', subtitle: 'frog · crab · swim', soundGroup: 'Initial Blends', emoji: '🐸', kind: 'vowel' },
+  { id: 'flame-final-blends', band: 'flame', title: 'End Blends', subtitle: 'tent · hand · lamp', soundGroup: 'Final Blends', emoji: '⛺', kind: 'vowel' },
+  { id: 'flame-digraphs', band: 'flame', title: 'Digraphs', subtitle: 'fish · chick · thumb', soundGroup: 'Digraphs', emoji: '🐟', kind: 'vowel' },
+  { id: 'flame-ending-rules', band: 'flame', title: 'Endings', subtitle: 'duck · ring · bell', soundGroup: 'Ending Rules', emoji: '🦆', kind: 'vowel' },
+  { id: 'flame-boss', band: 'flame', title: 'Flame Boss', subtitle: 'All Flame words', soundGroup: null, emoji: '🔥', kind: 'boss' },
+];
+
+export interface AdventureBandDef {
+  id: AdventureBandId;
+  title: string;
+  /** Widely supported emoji (Unicode 13 or older) for the completion sticker. */
+  stickerEmoji: string;
+  /** Lexicon band code (spreadsheet Band column). */
+  lexiconBand: 'K' | '1A';
+  levels: AdventureLevelDef[];
+}
+
+/** Known adventure modes. Later bands (Blaze, Nova) append here. No gating between bands. */
+export const ADVENTURE_BANDS: AdventureBandDef[] = [
+  { id: 'spark', title: 'Spark', stickerEmoji: '✨', lexiconBand: 'K', levels: SPARK_LEVELS },
+  { id: 'flame', title: 'Flame', stickerEmoji: '🔥', lexiconBand: '1A', levels: FLAME_LEVELS },
+];
+
+/** Cards on Adventure Home. Blaze and Nova are placeholders (no levels yet). Emoji are Unicode <= 12. */
+export const ADVENTURE_HOME_CARDS: { id: string; title: string; emoji: string; comingSoon?: boolean }[] = [
+  { id: 'spark', title: 'Spark', emoji: '✨' },
+  { id: 'flame', title: 'Flame', emoji: '🔥' },
+  { id: 'blaze', title: 'Blaze', emoji: '☀️', comingSoon: true },
+  { id: 'nova', title: 'Nova', emoji: '🌟', comingSoon: true },
+];
+
+export function getBandDef(id: AdventureBandId): AdventureBandDef {
+  return ADVENTURE_BANDS.find((b) => b.id === id) ?? ADVENTURE_BANDS[0];
+}
+
+export function levelsForBand(id: AdventureBandId): AdventureLevelDef[] {
+  return getBandDef(id).levels;
+}
+
+/** Every lexicon word in a band (Spark = K, Flame = 1A). */
+export function wordsForBand(id: AdventureBandId): AdventureLexiconEntry[] {
+  return wordsForLexiconBand(getBandDef(id).lexiconBand);
+}
+
+/** Lesson words for one level (Boss = every word in its band). */
+export function wordsForLevel(level: Pick<AdventureLevelDef, 'band' | 'soundGroup'>): AdventureLexiconEntry[] {
+  const all = wordsForBand(level.band);
+  return level.soundGroup ? all.filter((e) => e.soundGroup === level.soundGroup) : all;
+}
 
 export const ADVENTURE_PROGRESS_KEY = 'word_blitz_adventure_progress_v1';
 
