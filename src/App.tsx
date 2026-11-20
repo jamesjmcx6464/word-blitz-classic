@@ -91,9 +91,8 @@ import {
   bonusSecondsFor,
   bonusTitleFor,
 } from './utils/adventureConfig';
-import { recordBonusScore } from './utils/adventureProgress';
-import { bonusLetterDraw } from './utils/adventureBonus';
-import { LetterDrawOptions } from './utils/letterBag';
+import { getAdventureProgress, getPracticedWords, recordBonusScore } from './utils/adventureProgress';
+import { BonusLetterQueue, bonusLetterCapacity } from './utils/adventureBonus';
 import confetti from 'canvas-confetti';
 
 export default function App() {
@@ -123,7 +122,7 @@ export default function App() {
   // Spark Adventure bonus Blitz (arcade game tuned to a beaten level's words)
   const [bonusRun, setBonusRun] = useState<{ level: AdventureLevelDef; seconds: number } | null>(null);
   const bonusRunRef = useRef<{ level: AdventureLevelDef; seconds: number } | null>(null);
-  const bonusDrawRef = useRef<LetterDrawOptions | null>(null);
+  const bonusQueueRef = useRef<BonusLetterQueue | null>(null);
   const [bonusResult, setBonusResult] = useState<{ best: number; isNewBest: boolean } | null>(null);
 
   // Selected Difficulty (Easy, Normal, Hard, Nightmare) persisted across sessions
@@ -795,9 +794,14 @@ export default function App() {
     }
 
     const diffNow = difficultyRef.current;
-    const letter: LetterTileInfo = drawLetter(
-      bonusDrawRef.current ?? resolveLetterDraw(diffNow, letterDistRef.current)
-    );
+    // Adventure bonus Blitz: next letter from the pre-built, validated lesson-word queue.
+    const bonusQueue = bonusQueueRef.current;
+    const letter: LetterTileInfo = bonusQueue
+      ? (() => {
+          const ch = bonusQueue.next();
+          return { display: ch, value: ch };
+        })()
+      : drawLetter(resolveLetterDraw(diffNow, letterDistRef.current));
 
     const newTile: HexTile = {
       id: `tile_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${Math.floor(performance.now() * 100)}`,
@@ -938,7 +942,7 @@ export default function App() {
   function restoreAfterBonus() {
     const prev = preBonusRef.current;
     bonusRunRef.current = null;
-    bonusDrawRef.current = null;
+    bonusQueueRef.current = null;
     setBonusRun(null);
     if (!prev) return;
     preBonusRef.current = null;
@@ -963,7 +967,12 @@ export default function App() {
     const run = { level, seconds };
     bonusRunRef.current = run;
     setBonusRun(run);
-    bonusDrawRef.current = bonusLetterDraw(level);
+    // Enough letters for the whole round at this screen's Normal cadence (worst-case jitter).
+    const capacity = bonusLetterCapacity(seconds, speedMultiplierRef.current, boardWidthRef.current);
+    const player = adventurePlayerRef.current;
+    const practiced = player ? getPracticedWords(getAdventureProgress(player.name, player.logo), level) : [];
+    bonusQueueRef.current = new BonusLetterQueue(level, capacity, practiced);
+    if (import.meta.env.DEV) (window as Window & { __wbBonusQueue?: BonusLetterQueue }).__wbBonusQueue = bonusQueueRef.current;
 
     setCurrentSoloPlayer(null);
     currentSoloPlayerRef.current = null;

@@ -18,6 +18,7 @@ import {
   wordsForBand,
 } from '../../utils/adventureConfig';
 import { playWordAudio, stopWordAudio } from '../../utils/adventureAudio';
+import { recordPracticedWord } from '../../utils/adventureProgress';
 import {
   buildLevelRounds,
   buildRoundTiles,
@@ -243,6 +244,7 @@ export const AdventurePlay: React.FC<AdventurePlayProps> = ({
       nextDone.add(match.id);
       setDoneIds(nextDone);
       setFeedback(`Nice! ${match.emoji}`);
+      recordPracticedWord(playerName, playerLogo, level, match.word);
       playWordAudio(match.word);
 
       if (nextDone.size >= cards.length) {

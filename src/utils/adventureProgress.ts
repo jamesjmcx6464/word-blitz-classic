@@ -30,6 +30,8 @@ export interface AdventureCharacterProgress {
    * Spark keeps using top-level bonusBest / bossPassed for backward compatibility.
    */
   bands?: Partial<Record<string, AdventureBandScore>>;
+  /** Words spelled correctly in each level (keyed by level id), used first by that level's bonus Blitz. */
+  practiced?: Partial<Record<string, string[]>>;
   /** Completion stickers, keyed by band id (e.g. spark). */
   stickers?: Partial<Record<string, boolean>>;
   updatedAt: number;
@@ -305,4 +307,26 @@ export function consumeReturnToMap(): boolean {
   } catch {
     return false;
   }
+}
+
+/** Remember a word the player spelled correctly in a level (feeds that level's bonus Blitz). */
+export function recordPracticedWord(name: string, logo: string, level: AdventureLevelDef, word: string): void {
+  const key = playerKey(name, logo);
+  const store = readStore();
+  const current = store[key] ?? emptyProgress(name, logo);
+  const list = current.practiced?.[level.id] ?? [];
+  const w = word.trim().toLowerCase();
+  if (list.includes(w)) return;
+  store[key] = {
+    ...current,
+    practiced: { ...(current.practiced ?? {}), [level.id]: [...list, w] },
+    updatedAt: Date.now(),
+  };
+  writeStore(store);
+}
+
+/** Words practiced in a level. A Boss Blitz also counts words practiced in that band's levels. */
+export function getPracticedWords(progress: AdventureCharacterProgress, level: AdventureLevelDef): string[] {
+  const ids = level.kind === 'boss' ? levelsForBand(level.band).map((l) => l.id) : [level.id];
+  return Array.from(new Set(ids.flatMap((id) => progress.practiced?.[id] ?? [])));
 }
