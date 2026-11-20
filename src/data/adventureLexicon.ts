@@ -1762,9 +1762,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Silent E (i_e)",
     "pattern": "i_e",
     "word": "tire",
-    "emoji": "🛞",
+    "emoji": "🏎️",
     "swappableType": "Silent E & Vowel Teams",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1B-021",
@@ -1817,9 +1817,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Silent E (o_e, u_e)",
     "pattern": "stone",
     "word": "stone",
-    "emoji": "🪨",
+    "emoji": "⛰️",
     "swappableType": "Silent E & Vowel Teams",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1B-026",
@@ -1839,9 +1839,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Silent E (o_e, u_e)",
     "pattern": "smoke",
     "word": "smoke",
-    "emoji": "🚬",
+    "emoji": "💨",
     "swappableType": "Silent E & Vowel Teams",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1B-028",
@@ -1861,9 +1861,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Silent E (o_e, u_e)",
     "pattern": "u_e",
     "word": "flute",
-    "emoji": "🪈",
+    "emoji": "🎶",
     "swappableType": "Silent E & Vowel Teams",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1B-030",
@@ -1872,9 +1872,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Silent E (o_e, u_e)",
     "pattern": "u_e",
     "word": "mule",
-    "emoji": "🫏",
+    "emoji": "🐴",
     "swappableType": "Silent E & Vowel Teams",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1B-031",
@@ -1993,9 +1993,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Long E Teams",
     "pattern": "ea",
     "word": "seal",
-    "emoji": "🦭",
+    "emoji": "🦦",
     "swappableType": "Silent E & Vowel Teams",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1B-042",
@@ -2004,9 +2004,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Long E Teams",
     "pattern": "ea",
     "word": "pea",
-    "emoji": "🫛",
+    "emoji": "🟢",
     "swappableType": "Silent E & Vowel Teams",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1B-043",
@@ -2103,9 +2103,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Long A Teams",
     "pattern": "ai",
     "word": "pail",
-    "emoji": "🪣",
+    "emoji": "🧺",
     "swappableType": "Silent E & Vowel Teams",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1B-052",
@@ -2246,9 +2246,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Long O Teams",
     "pattern": "ow",
     "word": "crow",
-    "emoji": "🐦‍⬛",
+    "emoji": "🐦",
     "swappableType": "Silent E & Vowel Teams",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "1B-065",
@@ -2444,9 +2444,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "R-Controlled (or)",
     "pattern": "board",
     "word": "board",
-    "emoji": "🪵",
+    "emoji": "🛹",
     "swappableType": "R-Controlled & Diphthongs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "2-018",
@@ -2686,9 +2686,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Diphthongs (oi, oy)",
     "pattern": "oi",
     "word": "coin",
-    "emoji": "🪙",
+    "emoji": "💰",
     "swappableType": "R-Controlled & Diphthongs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "2-040",
@@ -2708,9 +2708,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Diphthongs (oi, oy)",
     "pattern": "oi",
     "word": "soil",
-    "emoji": "🪱",
+    "emoji": "🌱",
     "swappableType": "R-Controlled & Diphthongs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "2-042",
@@ -2840,9 +2840,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Variant oo & /aw/",
     "pattern": "oo",
     "word": "hook",
-    "emoji": "🪝",
+    "emoji": "🎣",
     "swappableType": "R-Controlled & Diphthongs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "2-054",
@@ -2851,9 +2851,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Variant oo & /aw/",
     "pattern": "oo",
     "word": "wood",
-    "emoji": "🪵",
+    "emoji": "🌲",
     "swappableType": "R-Controlled & Diphthongs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "2-055",
@@ -2873,9 +2873,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Variant oo & /aw/",
     "pattern": "aw",
     "word": "saw",
-    "emoji": "🪚",
+    "emoji": "👀",
     "swappableType": "R-Controlled & Diphthongs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "2-057",
@@ -2961,9 +2961,9 @@ export const ADVENTURE_LEXICON: AdventureLexiconEntry[] = [
     "soundGroup": "Long I / Soft C & G",
     "pattern": "y",
     "word": "fly",
-    "emoji": "🪰",
+    "emoji": "🦋",
     "swappableType": "R-Controlled & Diphthongs",
-    "weakEmoji": false
+    "weakEmoji": true
   },
   {
     "id": "2-065",

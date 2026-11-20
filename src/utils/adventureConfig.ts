@@ -12,7 +12,7 @@ export const ADVENTURE_WORDS_PER_LEVEL =
 
 export const ADVENTURE_BOSS_MAX_MISSES = 3;
 
-export type AdventureBandId = 'spark' | 'flame';
+export type AdventureBandId = 'spark' | 'flame' | 'blaze' | 'nova';
 
 export type AdventureLevelId =
   | 'short-a'
@@ -25,7 +25,22 @@ export type AdventureLevelId =
   | 'flame-final-blends'
   | 'flame-digraphs'
   | 'flame-ending-rules'
-  | 'flame-boss';
+  | 'flame-boss'
+  | 'blaze-a-e'
+  | 'blaze-i-e'
+  | 'blaze-o-e'
+  | 'blaze-long-e'
+  | 'blaze-long-a'
+  | 'blaze-long-o'
+  | 'blaze-boss'
+  | 'nova-ar'
+  | 'nova-or'
+  | 'nova-er'
+  | 'nova-ou'
+  | 'nova-oi'
+  | 'nova-oo'
+  | 'nova-long-i'
+  | 'nova-boss';
 
 export interface AdventureLevelDef {
   id: AdventureLevelId;
@@ -56,28 +71,51 @@ export const FLAME_LEVELS: AdventureLevelDef[] = [
   { id: 'flame-boss', band: 'flame', title: 'Flame Boss', subtitle: 'All Flame words', soundGroup: null, emoji: '🔥', kind: 'boss' },
 ];
 
+export const BLAZE_LEVELS: AdventureLevelDef[] = [
+  { id: 'blaze-a-e', band: 'blaze', title: 'a_e', subtitle: 'cake · snake', soundGroup: 'Silent E (a_e)', emoji: '🎂', kind: 'vowel' },
+  { id: 'blaze-i-e', band: 'blaze', title: 'i_e', subtitle: 'bike · kite', soundGroup: 'Silent E (i_e)', emoji: '🚲', kind: 'vowel' },
+  { id: 'blaze-o-e', band: 'blaze', title: 'o_e u_e', subtitle: 'bone · cube', soundGroup: 'Silent E (o_e, u_e)', emoji: '🦴', kind: 'vowel' },
+  { id: 'blaze-long-e', band: 'blaze', title: 'ee ea', subtitle: 'bee · leaf', soundGroup: 'Long E Teams', emoji: '🐝', kind: 'vowel' },
+  { id: 'blaze-long-a', band: 'blaze', title: 'ai ay', subtitle: 'rain · hay', soundGroup: 'Long A Teams', emoji: '🚂', kind: 'vowel' },
+  { id: 'blaze-long-o', band: 'blaze', title: 'oa ow', subtitle: 'boat · snow', soundGroup: 'Long O Teams', emoji: '🐐', kind: 'vowel' },
+  { id: 'blaze-boss', band: 'blaze', title: 'Blaze Boss', subtitle: 'All Blaze words', soundGroup: null, emoji: '☀️', kind: 'boss' },
+];
+
+export const NOVA_LEVELS: AdventureLevelDef[] = [
+  { id: 'nova-ar', band: 'nova', title: 'ar', subtitle: 'car · star', soundGroup: 'R-Controlled (ar)', emoji: '🚗', kind: 'vowel' },
+  { id: 'nova-or', band: 'nova', title: 'or', subtitle: 'corn · fork', soundGroup: 'R-Controlled (or)', emoji: '🌽', kind: 'vowel' },
+  { id: 'nova-er', band: 'nova', title: 'er ir ur', subtitle: 'bird · surf', soundGroup: 'R-Controlled (er, ir, ur)', emoji: '🐦', kind: 'vowel' },
+  { id: 'nova-ou', band: 'nova', title: 'ou ow', subtitle: 'house · cow', soundGroup: 'Diphthongs (ou, ow)', emoji: '🏠', kind: 'vowel' },
+  { id: 'nova-oi', band: 'nova', title: 'oi oy', subtitle: 'coin · toy', soundGroup: 'Diphthongs (oi, oy)', emoji: '🧸', kind: 'vowel' },
+  { id: 'nova-oo', band: 'nova', title: 'oo aw', subtitle: 'moon · paw', soundGroup: 'Variant oo & /aw/', emoji: '🌕', kind: 'vowel' },
+  { id: 'nova-long-i', band: 'nova', title: 'igh c g', subtitle: 'light · city', soundGroup: 'Long I / Soft C & G', emoji: '💡', kind: 'vowel' },
+  { id: 'nova-boss', band: 'nova', title: 'Nova Boss', subtitle: 'All Nova words', soundGroup: null, emoji: '🌟', kind: 'boss' },
+];
+
 export interface AdventureBandDef {
   id: AdventureBandId;
   title: string;
   /** Widely supported emoji (Unicode 13 or older) for the completion sticker. */
   stickerEmoji: string;
   /** Lexicon band code (spreadsheet Band column). */
-  lexiconBand: 'K' | '1A';
+  lexiconBand: 'K' | '1A' | '1B' | '2';
   levels: AdventureLevelDef[];
 }
 
-/** Known adventure modes. Later bands (Blaze, Nova) append here. No gating between bands. */
+/** Known adventure modes. No gating between bands. */
 export const ADVENTURE_BANDS: AdventureBandDef[] = [
   { id: 'spark', title: 'Spark', stickerEmoji: '✨', lexiconBand: 'K', levels: SPARK_LEVELS },
   { id: 'flame', title: 'Flame', stickerEmoji: '🔥', lexiconBand: '1A', levels: FLAME_LEVELS },
+  { id: 'blaze', title: 'Blaze', stickerEmoji: '☀️', lexiconBand: '1B', levels: BLAZE_LEVELS },
+  { id: 'nova', title: 'Nova', stickerEmoji: '🌟', lexiconBand: '2', levels: NOVA_LEVELS },
 ];
 
-/** Cards on Adventure Home. Blaze and Nova are placeholders (no levels yet). Emoji are Unicode <= 12. */
+/** Cards on Adventure Home (comingSoon marks a placeholder with no levels). Emoji are Unicode <= 12. */
 export const ADVENTURE_HOME_CARDS: { id: string; title: string; emoji: string; comingSoon?: boolean }[] = [
   { id: 'spark', title: 'Spark', emoji: '✨' },
   { id: 'flame', title: 'Flame', emoji: '🔥' },
-  { id: 'blaze', title: 'Blaze', emoji: '☀️', comingSoon: true },
-  { id: 'nova', title: 'Nova', emoji: '🌟', comingSoon: true },
+  { id: 'blaze', title: 'Blaze', emoji: '☀️' },
+  { id: 'nova', title: 'Nova', emoji: '🌟' },
 ];
 
 export function getBandDef(id: AdventureBandId): AdventureBandDef {

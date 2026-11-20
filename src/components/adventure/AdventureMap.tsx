@@ -158,7 +158,8 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
             {bandScore.toLocaleString()}
           </span>
         </div>
-        {/* Map layout: lesson levels around the Boss */}
+        {/* Map layout: up to 5 lessons ring the Boss; more use a grid */}
+        {LESSONS.length <= 5 ? (
         <div className="relative w-full max-w-md aspect-square max-h-[min(68vh,420px)]">
           {/* connector lines */}
           <svg
@@ -194,6 +195,26 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
             )}
           </div>
         </div>
+        ) : (() => {
+          // 6+ lessons: compact 3-wide grid with the Boss in the middle row.
+          const bossTile = renderTile(BOSS, bossOpen ? 'ring-2 ring-fuchsia-400/60 shadow-fuchsia-500/30' : '');
+          const rows = [LESSONS.slice(0, 3), [LESSONS[3], 'boss' as const, LESSONS[4]], LESSONS.slice(5)];
+          return (
+            <div data-testid="map-grid" className="w-full max-w-md flex flex-col items-center gap-6 sm:gap-8">
+              {rows.map((row, ri) => (
+                <div key={ri} className="flex justify-center gap-3 w-full">
+                  {row.map((cell) =>
+                    cell === 'boss' ? (
+                      <div key="boss" className="w-[31%] max-w-[120px] [&>div>button]:w-full">{bossTile}</div>
+                    ) : cell ? (
+                      <div key={cell.id} className="w-[31%] max-w-[120px] [&>div>button]:w-full">{renderTile(cell, '')}</div>
+                    ) : null
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {isBandBossPassed(progress, band) && (
           <div
