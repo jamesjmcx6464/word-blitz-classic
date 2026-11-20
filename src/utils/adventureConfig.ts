@@ -10,6 +10,20 @@ export const ADVENTURE_WORDS_PER_LEVEL =
 
 export const ADVENTURE_BOSS_MAX_MISSES = 3;
 
+export type AdventureBandId = 'spark';
+
+export interface AdventureBandDef {
+  id: AdventureBandId;
+  title: string;
+  /** Widely supported emoji (Unicode 13 or older) for the completion sticker. */
+  stickerEmoji: string;
+}
+
+/** Known adventure modes. Later bands (Flame, Blaze, Nova) append here. */
+export const ADVENTURE_BANDS: AdventureBandDef[] = [
+  { id: 'spark', title: 'Spark', stickerEmoji: '✨' },
+];
+
 export type AdventureLevelId =
   | 'short-a'
   | 'short-o'

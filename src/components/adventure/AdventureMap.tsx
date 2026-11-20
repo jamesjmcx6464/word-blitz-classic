@@ -8,11 +8,13 @@ import {
 import {
   AdventureCharacterProgress,
   getBonusBest,
+  getEarnedStickers,
   getSparkScore,
   isBonusUnlocked,
   isBossUnlocked,
   isLevelPassed,
 } from '../../utils/adventureProgress';
+import { AdventureStickerBadge } from './AdventureStickerBadge';
 import { bonusSecondsFor } from '../../utils/adventureConfig';
 
 interface AdventureMapProps {
@@ -127,11 +129,14 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
             Spark Adventure
           </div>
         </div>
-        <div className="flex items-center gap-2 min-h-[44px] px-3 rounded-2xl bg-slate-900 border border-slate-700">
-          <span className="text-xl">{playerLogo}</span>
-          <span className="font-bold text-sm text-slate-200 max-w-[72px] truncate">
+        <div className="flex items-center gap-1.5 min-h-[44px] pl-3 pr-2 rounded-2xl bg-slate-900 border border-slate-700">
+          <span className="text-xl leading-none">{playerLogo}</span>
+          <span className="font-bold text-sm text-slate-200 max-w-[56px] truncate">
             {playerName}
           </span>
+          {getEarnedStickers(progress).map((band) => (
+            <AdventureStickerBadge key={band.id} band={band} />
+          ))}
         </div>
       </header>
 
@@ -202,8 +207,13 @@ export const AdventureMap: React.FC<AdventureMapProps> = ({
         </div>
 
         {progress.bossPassed && (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-fuchsia-500/15 border border-fuchsia-400/40 text-fuchsia-200 font-bold text-sm">
-            <Zap className="w-4 h-4" />
+          <div
+            data-testid="spark-complete"
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-fuchsia-500/15 border border-fuchsia-400/40 text-fuchsia-200 font-bold text-sm"
+          >
+            {getEarnedStickers(progress).map((band) => (
+              <AdventureStickerBadge key={band.id} band={band} />
+            ))}
             Spark complete — you beat the Boss!
           </div>
         )}

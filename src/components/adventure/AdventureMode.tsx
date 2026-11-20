@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import confetti from 'canvas-confetti';
 import { AdventureLevelDef } from '../../utils/adventureConfig';
 import {
   AdventureCharacterProgress,
@@ -42,8 +43,22 @@ export const AdventureMode: React.FC<AdventureModeProps> = ({
 
   const handleLevelFinished = (passed: boolean) => {
     if (passed && level) {
-      const next = markLevelPassed(playerName, playerLogo, level.id);
+      const { progress: next, stickerJustEarned } = markLevelPassed(
+        playerName,
+        playerLogo,
+        level.id
+      );
       setProgress(next);
+      if (stickerJustEarned) {
+        // Brief burst on the result screen the first time the sticker is earned.
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.55 },
+          ticks: 140,
+          colors: ['#fde68a', '#fbbf24', '#f59e0b', '#c084fc', '#ffffff'],
+        });
+      }
     } else {
       setProgress(getAdventureProgress(playerName, playerLogo));
     }

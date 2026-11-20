@@ -23,6 +23,12 @@ import {
 import { DifficultyChoice } from '../types/game';
 import { DifficultyPicker } from './DifficultyPicker';
 import { TimerToggle } from './TimerToggle';
+import {
+  getAdventureProgress,
+  getEarnedStickers,
+  getTotalAdventureScore,
+} from '../utils/adventureProgress';
+import { AdventureStickerBadge } from './adventure/AdventureStickerBadge';
 
 interface SoloPlayerSetupModalProps {
   isOpen: boolean;
@@ -298,6 +304,7 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
                   <button
                     key={player.id}
                     type="button"
+                    data-testid={`adventure-character-${player.name}`}
                     onClick={() => handleSelectExistingPlayer(player)}
                     className={`shrink-0 w-[128px] p-3 rounded-2xl border-2 flex flex-col items-center justify-between text-center gap-1 transition-all cursor-pointer relative ${
                       isSelected
@@ -311,7 +318,17 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
                       </div>
                     )}
 
-                    <span className="text-3xl drop-shadow mt-0.5">{player.logo}</span>
+                    <span className="relative text-3xl drop-shadow mt-0.5">
+                      {player.logo}
+                      {isAdventure &&
+                        getEarnedStickers(getAdventureProgress(player.name, player.logo)).map((band) => (
+                          <AdventureStickerBadge
+                            key={band.id}
+                            band={band}
+                            className="absolute -top-1 -right-3"
+                          />
+                        ))}
+                    </span>
 
                     <div className="w-full min-w-0">
                       <span
@@ -321,16 +338,36 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
                       >
                         {player.name}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400 flex items-center justify-center gap-1 mt-0.5">
-                        {player.bestScore > 0 ? (
-                          <>
-                            <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
-                            <span>{player.bestScore.toLocaleString()} pts</span>
-                          </>
-                        ) : (
-                          <span>Registered</span>
-                        )}
-                      </span>
+                      {isAdventure ? (
+                        (() => {
+                          const total = getTotalAdventureScore(
+                            getAdventureProgress(player.name, player.logo)
+                          );
+                          return total > 0 ? (
+                            <span
+                              data-testid={`adventure-score-${player.id}`}
+                              className="text-xs font-black text-amber-300 tabular-nums block mt-0.5"
+                            >
+                              {total.toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-500 block mt-0.5">
+                              &nbsp;
+                            </span>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 flex items-center justify-center gap-1 mt-0.5">
+                          {player.bestScore > 0 ? (
+                            <>
+                              <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
+                              <span>{player.bestScore.toLocaleString()} pts</span>
+                            </>
+                          ) : (
+                            <span>Registered</span>
+                          )}
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
@@ -342,7 +379,20 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
           {isExistingMode ? (
             <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-slate-900 border-2 border-amber-400/60 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="text-4xl drop-shadow shrink-0">{selectedExistingPlayer.logo}</span>
+                <span className="relative text-4xl drop-shadow shrink-0">
+                  {selectedExistingPlayer.logo}
+                  {isAdventure &&
+                    getEarnedStickers(
+                      getAdventureProgress(selectedExistingPlayer.name, selectedExistingPlayer.logo)
+                    ).map((band) => (
+                      <AdventureStickerBadge
+                        key={band.id}
+                        band={band}
+                        size="md"
+                        className="absolute -top-1 -right-2"
+                      />
+                    ))}
+                </span>
                 <div className="min-w-0">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block">
                     Selected Player
@@ -350,10 +400,26 @@ export const SoloPlayerSetupModal: React.FC<SoloPlayerSetupModalProps> = ({
                   <span className="font-display font-black text-xl text-white truncate block">
                     {selectedExistingPlayer.name}
                   </span>
-                  {selectedExistingPlayer.bestScore > 0 && (
-                    <span className="text-xs text-slate-300 font-medium">
-                      Personal best: {selectedExistingPlayer.bestScore.toLocaleString()} pts
-                    </span>
+                  {isAdventure ? (
+                    (() => {
+                      const total = getTotalAdventureScore(
+                        getAdventureProgress(selectedExistingPlayer.name, selectedExistingPlayer.logo)
+                      );
+                      return total > 0 ? (
+                        <span
+                          data-testid="adventure-score-selected"
+                          className="text-sm font-black text-amber-300 tabular-nums"
+                        >
+                          {total.toLocaleString()}
+                        </span>
+                      ) : null;
+                    })()
+                  ) : (
+                    selectedExistingPlayer.bestScore > 0 && (
+                      <span className="text-xs text-slate-300 font-medium">
+                        Personal best: {selectedExistingPlayer.bestScore.toLocaleString()} pts
+                      </span>
+                    )
                   )}
                 </div>
               </div>
