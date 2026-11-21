@@ -66,12 +66,21 @@ export function scrambleWord(word: string, rand: Rand): string[] {
 /** Vowels for the drop rhythm rule (Y counts as a consonant). */
 export const isBonusVowel = (ch: string): boolean => 'AEIOU'.includes(ch);
 
-/** Number of 3-in-a-row same-type (vowel/consonant) windows in `seq` that end at index >= from. */
-export function countTypeTriples(seq: readonly string[], from = 2, to = seq.length): number {
+/** Drop rhythm: at most this many vowels (or consonants) in a row; the next must be the other type. */
+export const RHYTHM_MAX_RUN = 3;
+const M = RHYTHM_MAX_RUN;
+
+/**
+ * Number of too-long-run windows (RHYTHM_MAX_RUN + 1 same-type letters in a row) in
+ * `seq` that end at index >= from.
+ */
+export function countTypeTriples(seq: readonly string[], from = M, to = seq.length): number {
   let n = 0;
-  for (let i = Math.max(2, from); i < to; i++) {
-    const a = isBonusVowel(seq[i - 2]), b = isBonusVowel(seq[i - 1]), c = isBonusVowel(seq[i]);
-    if (a === b && b === c) n++;
+  for (let i = Math.max(M, from); i < to; i++) {
+    const t = isBonusVowel(seq[i]);
+    let same = true;
+    for (let k = 1; k <= M && same; k++) same = isBonusVowel(seq[i - k]) === t;
+    if (same) n++;
   }
   return n;
 }
@@ -93,16 +102,16 @@ function runState(prefix: readonly string[]): { runV: boolean; run: number } {
   return { runV, run };
 }
 
-/** True when the letters can follow `before` with no 3 same-type in a row. */
+/** True when the letters can follow `before` with no more than RHYTHM_MAX_RUN same-type in a row. */
 export function rhythmPossible(letters: readonly string[], before: readonly string[]): boolean {
   const nv = letters.filter(isBonusVowel).length;
-  const { runV, run } = runState(before.slice(-2));
-  return rhythmFeasible(nv, letters.length - nv, runV, run, 2, 2);
+  const { runV, run } = runState(before.slice(-M));
+  return rhythmFeasible(nv, letters.length - nv, runV, run, M, M);
 }
 
 /**
- * Shuffle `letters` so that, after `before` and followed by the fixed `after`, no 3
- * vowels or 3 consonants drop in a row. Same multiset, always. When the pool makes
+ * Shuffle `letters` so that, after `before` and followed by the fixed `after`, no more than
+ * RHYTHM_MAX_RUN of the same type drop in a row. Same multiset, always. When the pool makes
  * that impossible (e.g. far more consonants than vowels), the longer runs are spread
  * as evenly as possible instead of piling up at the end.
  */
@@ -115,15 +124,15 @@ export function arrangeRhythm(
   if (letters.length === 0) return [];
   const vowels0 = letters.filter(isBonusVowel);
   const cons0 = letters.filter((c) => !isBonusVowel(c));
-  const prev = before.slice(-2);
+  const prev = before.slice(-M);
   const st0 = runState(prev);
-  // Smallest run caps that fit this pool (2/2 unless impossible).
-  if (!rhythmFeasible(vowels0.length, cons0.length, st0.runV, st0.run, 2, 2)) {
+  // Pools that cannot keep the rule are spread evenly instead.
+  if (!rhythmFeasible(vowels0.length, cons0.length, st0.runV, st0.run, M, M)) {
     return spreadEvenly(vowels0, cons0, prev, rand);
   }
-  const score = (out: string[]) => countTypeTriples([...prev, ...out, ...after.slice(0, 2)], 2);
+  const score = (out: string[]) => countTypeTriples([...prev, ...out, ...after.slice(0, M)], M);
   // Exact check (memoised): can the remaining letters be placed, then the fixed
-  // `after` letters, with no 3 same-type in a row? Falls back to ignoring `after`.
+  // `after` letters, with no more than RHYTHM_MAX_RUN same-type in a row? Falls back to ignoring `after`.
   const makeCanFinish = (tail: readonly string[]) => {
     const memo = new Map<number, boolean>();
     const tailV = tail.map(isBonusVowel);
@@ -133,7 +142,7 @@ export function arrangeRhythm(
         for (const v of tailV) {
           r = r && lv === v ? r + 1 : 1;
           lv = v;
-          if (r > 2) return false;
+          if (r > M) return false;
         }
         return true;
       }
@@ -143,31 +152,31 @@ export function arrangeRhythm(
       let ok = false;
       if (nv > 0) {
         const r = run && lastV ? run + 1 : 1;
-        ok = r <= 2 && can(nv - 1, nc, true, r);
+        ok = r <= M && can(nv - 1, nc, true, r);
       }
       if (!ok && nc > 0) {
         const r = run && !lastV ? run + 1 : 1;
-        ok = r <= 2 && can(nv, nc - 1, false, r);
+        ok = r <= M && can(nv, nc - 1, false, r);
       }
       memo.set(key, ok);
       return ok;
     };
     return can;
   };
-  let canFinish = makeCanFinish(after.slice(0, 2));
-  if (!canFinish(vowels0.length, cons0.length, st0.runV, Math.min(st0.run, 2))) canFinish = makeCanFinish([]);
+  let canFinish = makeCanFinish(after.slice(0, M));
+  if (!canFinish(vowels0.length, cons0.length, st0.runV, Math.min(st0.run, M))) canFinish = makeCanFinish([]);
   let best: string[] = [];
   let bestScore = Infinity;
   for (let attempt = 0; attempt < 8 && bestScore > 0; attempt++) {
     const vs = shuffle(vowels0, rand), cs = shuffle(cons0, rand);
     const out: string[] = [];
-    let runV = st0.runV, run = Math.min(st0.run, 2);
+    let runV = st0.runV, run = Math.min(st0.run, M);
     while (vs.length || cs.length) {
       const opts: boolean[] = [];
       for (const v of [true, false]) {
         if (!(v ? vs.length : cs.length)) continue;
         const nr = run && runV === v ? run + 1 : 1;
-        if (nr > 2) continue;
+        if (nr > M) continue;
         if (canFinish(vs.length - (v ? 1 : 0), cs.length - (v ? 0 : 1), v, nr)) opts.push(v);
       }
       const pickV =
@@ -186,7 +195,7 @@ export function arrangeRhythm(
 }
 
 /**
- * Pool cannot keep the 2-in-a-row rule (e.g. far more consonants than vowels):
+ * Pool cannot keep the RHYTHM_MAX_RUN rule (e.g. far more consonants than vowels):
  * single minority letters split the majority into groups as equal in size as
  * possible (counting the run already in progress), so long runs are spread evenly.
  */
@@ -246,12 +255,12 @@ function permutations(letters: string[]): string[][] {
   return out;
 }
 
-/** Scrambles of `word` (different from it) with no 3 same-type in a row after `before`. */
+/** Scrambles of `word` (different from it) with no more than RHYTHM_MAX_RUN same-type in a row after `before`. */
 export function rhythmScrambles(word: string, before: readonly string[]): string[][] {
   if (word.length > 7) return [];
-  const prev = before.slice(-2);
+  const prev = before.slice(-M);
   return permutations(word.split('')).filter(
-    (p) => p.join('') !== word && countTypeTriples([...prev, ...p], 2) === 0
+    (p) => p.join('') !== word && countTypeTriples([...prev, ...p], M) === 0
   );
 }
 
@@ -316,7 +325,7 @@ export class BonusWordDeck {
  * Level: word 1 in order, then every letter of words 2..N shuffled together.
  * Boss: word 1 in order, words 2 and 3 each scrambled as their own block,
  * then every letter of words 4..N shuffled together.
- * Drop rhythm: shuffled letters never make 3 vowels or 3 consonants in a row,
+ * Drop rhythm: shuffled letters never make more than RHYTHM_MAX_RUN (3) vowels or consonants in a row,
  * counting the letters before them (`prevTail` = end of the previous batch) and the
  * next batch's word 1, which follows them. Boss blocks use such a scramble when one exists.
  */
@@ -340,7 +349,7 @@ export function buildBonusBatch(
   if (isBoss) {
     for (const w of words.slice(1, 3)) {
       const start = letters.length;
-      letters.push(...scrambleWordRhythm(w, rand, [...prevTail, ...letters].slice(-2)));
+      letters.push(...scrambleWordRhythm(w, rand, [...prevTail, ...letters].slice(-M)));
       scrambled.push([start, letters.length]);
     }
     restFrom = 3;
@@ -348,7 +357,7 @@ export function buildBonusBatch(
   const start = letters.length;
   const nextWord = deck.peek() ?? '';
   letters.push(
-    ...arrangeRhythm(words.slice(restFrom).join('').split(''), rand, [...prevTail, ...letters].slice(-2), nextWord.split(''))
+    ...arrangeRhythm(words.slice(restFrom).join('').split(''), rand, [...prevTail, ...letters].slice(-M), nextWord.split(''))
   );
   return { words, letters, scrambled, shuffled: [start, letters.length] };
 }
@@ -395,7 +404,7 @@ export class BonusLetterQueue {
   }
   private addBatch(): void {
     for (let attempt = 0; attempt < 5; attempt++) {
-      const prev = this.batches.length ? this.batches[this.batches.length - 1].letters.slice(-2) : [];
+      const prev = this.batches.length ? this.batches[this.batches.length - 1].letters.slice(-M) : [];
       const batch = buildBonusBatch(this.deck, this.isBoss, this.capacity, this.rand, prev);
       const problems = validateBonusBatch(batch, this.allowed);
       if (problems.length === 0 || attempt === 4) {

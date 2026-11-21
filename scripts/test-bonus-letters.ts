@@ -12,6 +12,7 @@ import {
   countTypeTriples,
   rhythmPossible,
   rhythmScrambles,
+  RHYTHM_MAX_RUN,
   arrangeRhythm,
 } from '../src/utils/adventureBonus';
 import { drawLetter, resetLetterStreak } from '../src/utils/letterBag';
@@ -85,28 +86,31 @@ for (const level of ADVENTURE_BANDS.flatMap((b) => b.levels)) {
   for (let i = 0; i < 12; i += 4) if (new Set(seq.slice(i, i + 4)).size !== 4) fail('deck repeat in pass');
 }
 
-// Drop rhythm: no 3 vowels / 3 consonants in a row in shuffled letters (Y = consonant),
+// Drop rhythm: no run of RHYTHM_MAX_RUN+1 (4) vowels / consonants in a row in shuffled letters (Y = consonant),
 // including the joins (word 1 -> shuffled, Boss blocks, batch -> next batch's word 1).
 {
   const TRIALS = 500;
   let segs = 0, impossibleSegs = 0, impossibleTriples = 0, cleanSegs = 0;
   let blocks = 0, blockNoScramble = 0, joins = 0, joinForced = 0, maxRunSeen = 0, impTripleRate = 0;
-  for (const level of ADVENTURE_BANDS.flatMap((b) => b.levels)) {
+  const perBand = new Map<string, { segs: number; imp: number }>();
+  for (const band of ADVENTURE_BANDS) for (const level of band.levels) {
     const cap = bonusLetterCapacity(bonusSecondsFor(level));
     let lvImpossible = 0, lvSegs = 0;
+    const pb = perBand.get(band.id) ?? { segs: 0, imp: 0 };
+    perBand.set(band.id, pb);
     for (let trial = 0; trial < TRIALS; trial++) {
       const q = new BonusLetterQueue(level, cap, [], rnd);
       for (let i = 0; i < cap * 2 + 5; i++) q.next();
       const stream: string[] = [];
       q.batches.forEach((batch, bi) => {
         const off = stream.length;
-        const before = stream.slice(-2);
+        const before = stream.slice(-RHYTHM_MAX_RUN);
         // Boss blocks
         for (const [bs, be] of batch.scrambled) {
           blocks++;
-          const pre = [...stream, ...batch.letters].slice(0, off + bs).slice(-2);
+          const pre = [...stream, ...batch.letters].slice(0, off + bs).slice(-RHYTHM_MAX_RUN);
           const blk = batch.letters.slice(bs, be);
-          const bad = countTypeTriples([...pre, ...blk], 2) > 0;
+          const bad = countTypeTriples([...pre, ...blk], RHYTHM_MAX_RUN) > 0;
           if (bad) {
             const w = blk.slice().sort().join('');
             const word = batch.words[batch.scrambled.findIndex((r) => r[0] === bs) + 1];
@@ -118,13 +122,13 @@ for (const level of ADVENTURE_BANDS.flatMap((b) => b.levels)) {
         const [s0, e0] = batch.shuffled;
         if (e0 - s0 !== batch.words.slice(level.kind === 'boss' ? 3 : 1).join('').length) fail(`${level.id} shuffled range`);
         const seg = batch.letters.slice(s0, e0);
-        const pre = [...stream, ...batch.letters.slice(0, s0)].slice(-2);
-        const next = q.batches[bi + 1]?.letters.slice(0, 2) ?? [];
-        const inside = countTypeTriples([...pre, ...seg], 2);
-        const join = countTypeTriples([...pre, ...seg, ...next], 2 + seg.length);
+        const pre = [...stream, ...batch.letters.slice(0, s0)].slice(-RHYTHM_MAX_RUN);
+        const next = q.batches[bi + 1]?.letters.slice(0, RHYTHM_MAX_RUN) ?? [];
+        const inside = countTypeTriples([...pre, ...seg], RHYTHM_MAX_RUN);
+        const join = countTypeTriples([...pre, ...seg, ...next], RHYTHM_MAX_RUN + seg.length);
         segs++; lvSegs++;
         if (inside) {
-          if (rhythmPossible(seg, pre)) fail(`${level.id} shuffled segment has ${inside} triples though possible: ${seg.join('')}`);
+          if (rhythmPossible(seg, pre)) fail(`${level.id} shuffled segment has ${inside} runs of 4 though possible: ${seg.join('')}`);
           else {
             impossibleSegs++; lvImpossible++; impossibleTriples += inside;
             // Must be spread evenly: no more triples than an even split forces.
@@ -132,7 +136,7 @@ for (const level of ADVENTURE_BANDS.flatMap((b) => b.levels)) {
             const majV = nv > nc, maj = majV ? nv : nc, mn = majV ? nc : nv;
             let carry = 0; for (let i = pre.length - 1; i >= 0 && 'AEIOU'.includes(pre[i]) === majV; i--) carry++;
             const groups = mn + 1, tot = maj + carry, base = Math.floor(tot / groups), ex = tot - base * groups;
-            const minimal = (groups - ex) * Math.max(0, base - 2) + ex * Math.max(0, base - 1);
+            const minimal = (groups - ex) * Math.max(0, base - RHYTHM_MAX_RUN) + ex * Math.max(0, base + 1 - RHYTHM_MAX_RUN);
             if (inside > minimal + 1) fail(`${level.id} impossible segment not spread evenly: ${inside} > ${minimal} ${seg.join('')}`);
             let run = 0, mr = 0; for (const ch of seg) { run = 'AEIOU'.includes(ch) === majV ? run + 1 : 0; mr = Math.max(mr, run); }
             maxRunSeen = Math.max(maxRunSeen, mr);
@@ -144,7 +148,7 @@ for (const level of ADVENTURE_BANDS.flatMap((b) => b.levels)) {
           if (join) {
             // Allowed only if no clean arrangement of this segment can meet the next word 1.
             const alt = arrangeRhythm(seg, rnd, pre, next);
-            if (countTypeTriples([...pre, ...alt, ...next], 2) === 0 && inside === 0) fail(`${level.id} batch join breaks rhythm though avoidable pre=${pre.join("")} seg=${seg.join("")} next=${next.join("")} w1=${q.batches[bi + 1].words[0]}`);
+            if (countTypeTriples([...pre, ...alt, ...next], RHYTHM_MAX_RUN) === 0 && inside === 0) fail(`${level.id} batch join breaks rhythm though avoidable pre=${pre.join("")} seg=${seg.join("")} next=${next.join("")} w1=${q.batches[bi + 1].words[0]}`);
             else joinForced++;
           }
         }
@@ -152,18 +156,23 @@ for (const level of ADVENTURE_BANDS.flatMap((b) => b.levels)) {
         void before;
       });
     }
+    pb.segs += lvSegs; pb.imp += lvImpossible;
     if (lvImpossible) console.log(`  rhythm ${level.id}: impossible-tail segments ${lvImpossible}/${lvSegs} (${((100 * lvImpossible) / lvSegs).toFixed(1)}%)`);
   }
-  console.log(`rhythm: ${segs} shuffled segments, ${cleanSegs} clean, impossible-tail ${impossibleSegs} (${((100 * impossibleSegs) / segs).toFixed(2)}%, ${impossibleTriples} triples total, avg ${((100 * impTripleRate) / Math.max(1, impossibleSegs)).toFixed(1)} per 100 letters, longest run ${maxRunSeen}); boss blocks ${blocks}, no clean scramble ${blockNoScramble}; batch joins ${joins}, forced ${joinForced}`);
+  for (const [id, b] of perBand) console.log(`rhythm per adventure ${id}: impossible ${b.imp}/${b.segs} segments (${((100 * b.imp) / b.segs).toFixed(1)}%)`);
+  console.log(`rhythm: ${segs} shuffled segments, ${cleanSegs} clean, impossible-tail ${impossibleSegs} (${((100 * impossibleSegs) / segs).toFixed(2)}%, ${impossibleTriples} runs-of-4 total, avg ${((100 * impTripleRate) / Math.max(1, impossibleSegs)).toFixed(1)} per 100 letters, longest run ${maxRunSeen}); boss blocks ${blocks}, no clean scramble ${blockNoScramble}; batch joins ${joins}, forced ${joinForced}`);
   // Unit: rule holds, multiset kept, impossible pools spread evenly
-  const t = arrangeRhythm('AEIOBCDFGH'.split(''), rnd);
-  if (countTypeTriples(t) !== 0 || t.slice().sort().join('') !== 'ABCDEFGHIO') fail('arrangeRhythm basic');
+  const t = arrangeRhythm('AEBCDFGHJK'.split(''), rnd); // 2 vowels, 8 consonants: CCC V CCC V CC fits
+  if (countTypeTriples(t) !== 0 || t.slice().sort().join('') !== 'ABCDEFGHJK') fail('arrangeRhythm basic');
+  let anyRun3 = false;
+  for (let i = 0; i < 50 && !anyRun3; i++) { const u = arrangeRhythm('ABCDEFGHI'.split(''), rnd); for (let j = 2; j < u.length; j++) if (!'AEIOU'.includes(u[j]) && !'AEIOU'.includes(u[j - 1]) && !'AEIOU'.includes(u[j - 2])) anyRun3 = true; }
+  if (!anyRun3) fail('runs of 3 should now be allowed');
   const hard = arrangeRhythm('ABCDFGHJKLM'.split(''), rnd); // 1 vowel, 10 consonants
   if (hard.slice().sort().join('') !== 'ABCDFGHJKLM') fail('arrangeRhythm lost letters');
   let maxRun = 0, r = 0;
   for (const ch of hard) { r = 'AEIOU'.includes(ch) ? 0 : r + 1; maxRun = Math.max(maxRun, r); }
-  if (maxRun > 6) fail(`impossible pool not spread: ${hard.join('')}`);
-  if (countTypeTriples(arrangeRhythm(['Y', 'Y', 'A', 'B'], rnd)) !== 0) fail('Y treated as vowel?');
+  if (maxRun > 7) fail(`impossible pool not spread: ${hard.join('')}`);
+  if (countTypeTriples(arrangeRhythm(['Y', 'Y', 'Y', 'A', 'B', 'C'], rnd)) !== 0) fail('Y treated as vowel?');
 }
 // Arcade draw is untouched: the normal table still has all letters.
 resetLetterStreak();
