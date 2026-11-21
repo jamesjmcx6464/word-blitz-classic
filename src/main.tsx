@@ -1,6 +1,11 @@
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { installAppHeight } from './utils/viewportHeight';
+
+// Size the app to the visible screen (fixes the installed Android app laying out
+// taller than the screen until the first resize).
+installAppHeight();
 
 createRoot(document.getElementById('root')!).render(<App />);
 

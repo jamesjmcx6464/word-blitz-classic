@@ -3,7 +3,7 @@
 import { ADVENTURE_LEXICON } from '../src/data/adventureLexicon';
 import { ADVENTURE_BANDS, wordsForBand } from '../src/utils/adventureConfig';
 import { buildLevelRounds, buildRoundTiles, validateRoundTiles, roundLetterMultiset } from '../src/utils/adventureWordSelect';
-import { buildDropTiles, fitTileRadius, stepDrop, loosenAfterClear, restY, rowPitch, sameMultiset, findOverlaps, DropTile } from '../src/utils/adventureDrop';
+import { buildDropTiles, fitTileRadius, reflowTiles, stepDrop, loosenAfterClear, restY, rowPitch, sameMultiset, findOverlaps, DropTile } from '../src/utils/adventureDrop';
 import { findLandingY } from '../src/utils/hexPhysics';
 
 let fails = 0, rounds = 0, sims = 0;
@@ -77,6 +77,17 @@ for (const level of ALL_LEVELS) {
           }
           tiles = settle(tiles, geo, seed % 16 === 0);
           checkBoard(tiles, geo, roundLetterMultiset(words), `${level.id}/${seed}/${idx}`);
+          // Viewport shrinks/grows mid-round (Android bars): reflow in place, never re-drop.
+          if (seed % 32 === 8) {
+            const g2 = { ...geo, groundY: Math.max(150, geo.groundY - 44) };
+            const geo2 = { ...g2, tileRadius: fitTileRadius(g2.boardWidth, g2.groundY, maxTiles, g.tileRadius) };
+            const moved = reflowTiles(tiles, geo2, tiles.length);
+            if (moved.some((t) => !t.isFrozen)) fail('reflow unfroze a landed tile');
+            if (moved.length !== tiles.length || moved.some((t, i) => t.id !== tiles[i].id)) fail('reflow lost tiles');
+            checkBoard(settle(moved, geo2, false), geo2, roundLetterMultiset(words), `${level.id}/${seed}/${idx} reflow`);
+            const back = reflowTiles(moved, geo, tiles.length);
+            checkBoard(settle(back, geo, false), geo, roundLetterMultiset(words), `${level.id}/${seed}/${idx} reflow back`);
+          }
           // Spell each word: remove its tiles, re-settle, re-check
           let left = words.slice();
           for (const w of words) {

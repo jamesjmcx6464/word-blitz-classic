@@ -185,3 +185,46 @@ export function fitTileRadius(boardWidth: number, groundY: number, tileCount: nu
   }
   return MIN_FIT_RADIUS;
 }
+
+/**
+ * Board resized mid-round (viewport/bars changed): move every tile to its slot in
+ * the new geometry without dropping anything again. Columns keep their order;
+ * if fewer columns fit now, the extra columns' tiles go on top of the
+ * least-filled columns. Landed tiles snap to their new row; falling tiles keep
+ * falling from their current height (clamped above the new ground).
+ */
+export function reflowTiles(tiles: DropTile[], geo: DropGeometry, columnCount: number): DropTile[] {
+  if (tiles.length === 0) return tiles;
+  const maxCol = Math.max(...tiles.map((t) => t.col)) + 1;
+  const centers = evenColumnCenters(geo.boardWidth, Math.max(columnCount, 1), geo.tileRadius, COLUMN_GAP);
+  const cols = centers.length;
+  const byCol = new Map<number, DropTile[]>();
+  for (const t of tiles) {
+    const list = byCol.get(t.col) ?? [];
+    list.push(t);
+    byCol.set(t.col, list);
+  }
+  const stacks: DropTile[][] = Array.from({ length: cols }, () => []);
+  // Lowest first in each old column
+  for (let c = 0; c < maxCol; c++) {
+    const list = (byCol.get(c) ?? []).sort((a, b) => b.y - a.y || (a.id < b.id ? -1 : 1));
+    for (const t of list) {
+      let target = c;
+      if (target >= cols) {
+        target = 0;
+        for (let i = 1; i < cols; i++) if (stacks[i].length < stacks[target].length) target = i;
+      }
+      stacks[target].push(t);
+    }
+  }
+  const out = new Map<string, DropTile>();
+  stacks.forEach((list, c) => {
+    list.forEach((t, row) => {
+      const rest = restY(geo, row);
+      const x = centers[c];
+      if (t.isFrozen || t.isClearing) out.set(t.id, { ...t, col: c, x, y: rest, targetY: rest });
+      else out.set(t.id, { ...t, col: c, x, y: Math.min(t.y, rest), targetY: rest });
+    });
+  });
+  return tiles.map((t) => out.get(t.id) ?? t);
+}

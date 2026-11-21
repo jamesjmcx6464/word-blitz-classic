@@ -6,6 +6,7 @@ import {
   TileSpec,
   buildDropTiles,
   loosenAfterClear,
+  reflowTiles,
   stepDrop,
 } from '../utils/adventureDrop';
 
@@ -138,9 +139,9 @@ export function useHexDropBoard(geometry: HexDropGeometry | null) {
     [kick, publish]
   );
 
-  // Board resized. Only a change in width or tile size (rotation, window resize)
-  // needs a fresh layout (of every tile still in play). A height-only change just
-  // moves the ground, so shift every tile by the same amount - never re-drop.
+  // Board resized (window resize, Android bars hiding late, rotation). Never re-drop:
+  // a height-only change shifts every tile with the ground; a width or tile-size
+  // change reflows tiles into their slots in the new geometry.
   const geoKey = geometry ? `${geometry.boardWidth}|${geometry.groundY}|${geometry.tileRadius}` : '';
   const prevKeyRef = useRef(geoKey);
   useEffect(() => {
@@ -158,9 +159,14 @@ export function useHexDropBoard(geometry: HexDropGeometry | null) {
       }
       return;
     }
-    // Keep tiles that are mid-clear out of the new layout (they are already gone from specs).
-    tilesRef.current = [];
-    layout(specsRef.current);
+    if (tilesRef.current.length === 0) {
+      // Letters were queued before the board had a size: this is their first drop.
+      layout(specsRef.current);
+      return;
+    }
+    tilesRef.current = reflowTiles(tilesRef.current, geometry, Math.max(1, tilesRef.current.length));
+    publish();
+    kick();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geoKey, layout, publish]);
 
