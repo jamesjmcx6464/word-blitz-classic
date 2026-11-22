@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Trophy,
   Volume2,
@@ -14,6 +14,7 @@ import {
 import { ScreenModeType, DifficultyChoice, DIFFICULTY_PRESETS } from '../types/game';
 import { DifficultyPicker } from './DifficultyPicker';
 import { TimerToggle } from './TimerToggle';
+import { CreditsModal } from './CreditsModal';
 
 interface StartMenuProps {
   onQuickPlay: () => void;
@@ -54,6 +55,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
   letterMixLabel,
 }) => {
   const isWide = screenMode === 'pc';
+  const [creditsOpen, setCreditsOpen] = useState(false);
   const activeLabel =
     difficulty === 'custom'
       ? hasCustomSettings
@@ -115,6 +117,18 @@ export const StartMenu: React.FC<StartMenuProps> = ({
               <VolumeX className="w-5 h-5 text-slate-500" />
             )}
             <span className="hidden sm:inline">{soundEnabled ? 'Sound' : 'Muted'}</span>
+          </button>
+          <button
+            type="button"
+            data-testid="credits-button"
+            onClick={() => setCreditsOpen(true)}
+            aria-label="Credits and support"
+            className="min-h-[44px] min-w-[44px] px-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-slate-200 flex flex-col items-center justify-center font-bold shadow-sm transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95"
+          >
+            <span className="text-lg leading-none font-black text-amber-400" aria-hidden>
+              $
+            </span>
+            <span className="text-[9px] leading-none mt-0.5 text-slate-300">Credits</span>
           </button>
         </div>
       </header>
@@ -276,6 +290,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
       <p className="start-menu-version mt-2 text-center text-[10px] text-slate-500 select-none shrink-0">
         Version {__APP_VERSION__}
       </p>
+      {creditsOpen && <CreditsModal onClose={() => setCreditsOpen(false)} />}
     </div>
   );
 };
