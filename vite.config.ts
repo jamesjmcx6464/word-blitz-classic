@@ -64,8 +64,9 @@ function pwaOptions() {
         'Fast-paced hexagonal falling-letter word puzzle game. Spell words to clear hexagonal tiles before the stack reaches the top.',
       start_url: './',
       scope: './',
-      display: 'fullscreen' as const,
-      display_override: ['fullscreen' as const, 'standalone' as const],
+      // standalone so the nav bar can come back with the keyboard; src/utils/immersive.ts
+      // hides it with the Fullscreen API the rest of the time.
+      display: 'standalone' as const,
       orientation: 'portrait' as const,
       background_color: '#020617',
       theme_color: dev ? DEV_THEME : '#020617',

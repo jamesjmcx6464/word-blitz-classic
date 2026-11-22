@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @layer base {
+  /* Never show a white strip if the window is briefly taller than the app (keyboard / bars). */
+  html { background-color: #020617; }
+
   html, body, #root {
     margin: 0;
     padding: 0;
