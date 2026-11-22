@@ -8,10 +8,13 @@ export const TIP_LINKS = [
 
 type Tip = (typeof TIP_LINKS)[number];
 
-function newQuestion(): { a: number; b: number } {
-  const a = 3 + Math.floor(Math.random() * 7); // 3..9
+/** Grown-up gate: A × B ± C (A, B 3..9; C 2..9; answer always positive). */
+function newQuestion(): { a: number; b: number; c: number; op: '+' | '-'; answer: number } {
+  const a = 3 + Math.floor(Math.random() * 7);
   const b = 3 + Math.floor(Math.random() * 7);
-  return { a, b };
+  const c = 2 + Math.floor(Math.random() * 8);
+  const op: '+' | '-' = Math.random() < 0.5 ? '+' : '-';
+  return { a, b, c, op, answer: op === '+' ? a * b + c : a * b - c };
 }
 
 /** Opens an outside link in a new tab (the installed app hands it to the browser). No tracking. */
@@ -54,7 +57,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!tip) return;
-    if (Number(answer.trim()) === q.a + q.b) {
+    if (Number(answer.trim()) === q.answer) {
       openExternal(tip.url);
       setTip(null);
       setAnswer('');
@@ -146,7 +149,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Ask a grown-up</p>
               <label className="flex items-center gap-2 text-lg font-black text-white">
                 <span data-testid="gate-question">
-                  {q.a} + {q.b} =
+                  {q.a} × {q.b} {q.op === '+' ? '+' : '−'} {q.c} =
                 </span>
                 <input
                   ref={inputRef}
@@ -158,7 +161,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
                   maxLength={3}
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value.replace(/\D/g, ''))}
-                  aria-label={`What is ${q.a} plus ${q.b}?`}
+                  aria-label={`What is ${q.a} times ${q.b} ${q.op === '+' ? 'plus' : 'minus'} ${q.c}?`}
                   className="w-20 min-h-[44px] px-3 rounded-xl bg-slate-950 border-2 border-slate-700 focus:border-amber-400 outline-none text-center select-text"
                 />
               </label>
