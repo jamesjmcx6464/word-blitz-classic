@@ -90,7 +90,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
         <h2 id="credits-title" className="font-display font-black text-xl text-white pr-12 leading-tight">
           Word Blitz Classic
         </h2>
-        <p className="text-sm text-slate-300 mt-0.5">by James Murray (JMCX)</p>
+        <p className="text-sm text-slate-300 mt-0.5">by JMCX</p>
 
         <ul className="mt-3 space-y-1.5 text-[13px] leading-snug text-slate-300">
           <li>
@@ -99,10 +99,13 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
           </li>
           <li>
             <span className="font-bold text-slate-100">Words:</span> ENABLE word list; Dolch &amp; Fry sight words;
-            Adventure words from James's classroom lists
+            Adventure words from JMCX's classroom lists
           </li>
           <li>
             <span className="font-bold text-slate-100">Emoji:</span> your device's system emoji
+          </li>
+          <li>
+            <span className="font-bold text-slate-100">Built with Grok Bot:</span> Bean Counter and Word Blitz Classic
           </li>
           <li>
             <span className="font-bold text-slate-100">Fonts &amp; icons:</span> Outfit, Plus Jakarta Sans, Lucide
