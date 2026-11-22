@@ -90,9 +90,24 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
         <h2 id="credits-title" className="font-display font-black text-xl text-white pr-12 leading-tight">
           Word Blitz Classic
         </h2>
-        <p className="text-sm text-slate-300 mt-0.5">by JMCX</p>
 
-        <ul className="mt-3 space-y-1.5 text-[13px] leading-snug text-slate-300">
+        <div data-testid="credits-team" className="mt-2 space-y-1 text-[13px] leading-tight">
+          <div>
+            <span className="font-bold text-white">JMCX</span>
+            <span className="block text-[11px] text-slate-400">Creative Director, CEO of JMCX</span>
+          </div>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-amber-300/90 pt-0.5">Built with Grok Bot</div>
+          <div className="pl-2.5 border-l-2 border-slate-700">
+            <span className="font-bold text-white">Bean Counter</span>
+            <span className="block text-[11px] text-slate-400">AI Helper Wrangler, Token Saver, Team Coordinator</span>
+          </div>
+          <div className="pl-2.5 border-l-2 border-slate-700">
+            <span className="font-bold text-white">Word Blitz Classic</span>
+            <span className="block text-[11px] text-slate-400">Lead Developer, Adventure Mode Designer, Playtest Note-Taker</span>
+          </div>
+        </div>
+
+        <ul className="mt-2.5 pt-2.5 border-t border-slate-800 space-y-1 text-[12px] leading-snug text-slate-300">
           <li>
             <span className="font-bold text-slate-100">Voice:</span> Microsoft Edge neural voices (Clara, Emma) via
             edge-tts
@@ -105,14 +120,11 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
             <span className="font-bold text-slate-100">Emoji:</span> your device's system emoji
           </li>
           <li>
-            <span className="font-bold text-slate-100">Built with Grok Bot:</span> Bean Counter and Word Blitz Classic
-          </li>
-          <li>
             <span className="font-bold text-slate-100">Fonts &amp; icons:</span> Outfit, Plus Jakarta Sans, Lucide
           </li>
         </ul>
 
-        <div className="mt-4 pt-3 border-t border-slate-800">
+        <div className="mt-3 pt-2.5 border-t border-slate-800">
           <h3 className="font-display font-black text-base text-amber-300">Support Word Blitz</h3>
           {!tip ? (
             <div className="mt-2 flex flex-col gap-2">
