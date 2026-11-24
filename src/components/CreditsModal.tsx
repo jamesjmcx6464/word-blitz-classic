@@ -27,7 +27,7 @@ interface CreditsModalProps {
   onClose: () => void;
 }
 
-/** Credits + optional tip jar, behind a simple grown-ups math gate. */
+/** Credits. Tip jar (behind a grown-ups math gate) shows only when __SHOW_TIPS__ (dev builds for now). */
 export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
   const [tip, setTip] = useState<Tip | null>(null);
   const [q, setQ] = useState(newQuestion);
@@ -127,6 +127,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
           </li>
         </ul>
 
+        {__SHOW_TIPS__ && (
         <div className="mt-3 pt-2.5 border-t border-slate-800">
           <h3 className="font-display font-black text-base text-amber-300">Support Word Blitz</h3>
           {!tip ? (
@@ -190,6 +191,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ onClose }) => {
             </form>
           )}
         </div>
+        )}
       </div>
     </div>
   );

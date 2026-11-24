@@ -187,6 +187,8 @@ export default defineConfig(() => {
     ],
     define: {
       __APP_VERSION__: JSON.stringify(buildVersion()),
+      // Tip jar: off on live (main) until James says so; on for dev/preview builds.
+      __SHOW_TIPS__: JSON.stringify(isDevIconBuild()),
     },
     resolve: {
       alias: {
