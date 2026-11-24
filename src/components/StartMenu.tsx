@@ -122,13 +122,19 @@ export const StartMenu: React.FC<StartMenuProps> = ({
             type="button"
             data-testid="credits-button"
             onClick={() => setCreditsOpen(true)}
-            aria-label="Credits and support"
+            aria-label={__SHOW_TIPS__ ? 'Credits and support' : 'Credits'}
             className="min-h-[44px] min-w-[44px] px-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-slate-200 flex flex-col items-center justify-center font-bold shadow-sm transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 active:scale-95"
           >
-            <span className="text-lg leading-none font-black text-amber-400" aria-hidden>
-              $
-            </span>
-            <span className="text-[9px] leading-none mt-0.5 text-slate-300">Credits</span>
+            {__SHOW_TIPS__ ? (
+              <>
+                <span className="text-lg leading-none font-black text-amber-400" aria-hidden>
+                  $
+                </span>
+                <span className="text-[9px] leading-none mt-0.5 text-slate-300">Credits</span>
+              </>
+            ) : (
+              <span className="text-sm leading-none font-black text-slate-200">Credits</span>
+            )}
           </button>
         </div>
       </header>
