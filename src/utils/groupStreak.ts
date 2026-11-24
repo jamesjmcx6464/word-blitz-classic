@@ -148,11 +148,26 @@ export function isBlendDigraphWord(word: string): boolean {
   return BLENDS_DIGRAPHS.some((pat) => w.includes(pat));
 }
 
+const INFLECTION_ENDINGS = ['ING', 'ES', 'ED', 'S'] as const;
+
+/** True if the word, or its base with one -s/-es/-ed/-ing ending removed, ends with the blend. */
+export function endsWithFinalBlend(word: string, blend: string): boolean {
+  const w = normalizeWord(word);
+  if (w.endsWith(blend)) return true;
+  return INFLECTION_ENDINGS.some((end) => {
+    if (!w.endsWith(end)) return false;
+    const base = w.slice(0, -end.length);
+    return base.endsWith(blend) && base.length > blend.length && /[AEIOUY]/.test(base.slice(0, -blend.length));
+  });
+}
+
 export function isSoundFocusWord(word: string, sound: SoundFocusId): boolean {
   const w = normalizeWord(word);
   if (w.length < 2) return false;
-  // Final blends ('-nd'): the word ends with the blend. Initial blends ('bl'): it starts with it.
-  if (sound.startsWith('-')) return w.endsWith(sound.slice(1).toUpperCase());
+  // Final blends ('-nd'): the word ends with the blend, or does once an -s/-es/-ed/-ing
+  // ending is removed (LAMPS, PANTS, JUMPED, CAMPING). The base must keep a vowel so
+  // STING/STRING are not read as -st. Initial blends ('bl'): it starts with it.
+  if (sound.startsWith('-')) return endsWithFinalBlend(w, sound.slice(1).toUpperCase());
   if (SOUND_FOCUS[sound].group === 'Initial blends') return w.startsWith(sound.toUpperCase());
   if (sound.startsWith('short-')) {
     const v = sound.slice(-1).toUpperCase() as 'A' | 'E' | 'I' | 'O' | 'U';
